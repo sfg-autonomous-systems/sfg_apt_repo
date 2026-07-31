@@ -29,7 +29,7 @@ To install software from this repository, you need to add our public GPG key and
 
 ## For Developers: Publishing Packages
 
-> [!info]
+> [!important]
 > This repository is completely automated. **Do not commit `.deb` files manually.**
 
 To publish a package to this repository, your worker repository must build the package, upload it as a temporary artifact, and then call this repository's reusable GitHub Action workflow. 
