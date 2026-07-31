@@ -1,0 +1,81 @@
+name: Upload Packages
+
+on:
+  workflow_call:
+    inputs:
+      package_artifact_name:
+        description: The string name of the artifact uploaded by the caller workflow containing the package(s).
+        required: true
+        type: string
+      distribution:
+        description: The target Ubuntu distribution.
+        required: true
+        type: string
+    secrets:
+      ORG_PAT:
+        required: true
+
+jobs:
+  upload_packages:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download Packages From Caller
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.package_artifact_name }}
+          path: ./packages
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: "sfg-autonomous-systems/sfg_apt_repo"
+          token: ${{ secrets.ORG_PAT }}
+          path: "sfg_apt_repo"
+          lfs: true
+
+      - name: Commit Packages
+        run: |
+          mkdir -p "sfg_apt_repo/pool/${{ inputs.distribution }}"
+          cp "./packages/"*.deb "sfg_apt_repo/pool/${{ inputs.distribution }}/"
+
+          cd "sfg_apt_repo"
+          git config user.name "SFG Autonomous Systems - Machine User"
+          git config user.email "projekt-sfg-autonomous-systems@hs-esslingen.de"
+
+          number_of_new_packages=0
+
+          # Loop through downloaded packages.
+          for package in "../packages/"*.deb; do
+            # Skip if no packages were found.
+            [ -e "${package}" ] || continue
+            
+            package_name=$(basename "${package}")
+            
+            if [ -f "pool/${{ inputs.distribution }}/${package_name}" ]; then
+              checksum_existing=$(sha256sum "pool/${{ inputs.distribution }}/${package_name}" | awk '{print $1}')
+              checksum_new=$(sha256sum "${package}" | awk '{print $1}')
+
+              if [ "${checksum_existing}" = "${checksum_new}" ]; then
+                echo "Package ${package_name} already exists in 'pool/${{ inputs.distribution }}' with the same checksum. Skipping."
+                continue
+              else
+                echo "Package ${package_name} already exists in 'pool/${{ inputs.distribution }}' but has a different checksum. Overwriting."
+              fi
+            fi  
+            
+            echo "Adding ${package_name} to pool."
+            cp "${package}" "pool/${{ inputs.distribution }}/"
+            git add "pool/${{ inputs.distribution }}/${package_name}"
+            number_of_new_packages=$((number_of_new_packages + 1))
+          done
+
+          if [ "$number_of_new_packages" -eq 0 ]; then
+            echo "No new packages to upload. Skipping commit."
+            exit 0
+          fi
+
+          # Use a multi-line commit message to provide better audit logs.
+          git commit -m "Upload ${{ inputs.distribution }} package(s) from ${{ github.repository }}." \
+                     -m "Workflow Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+                     -m "Artifact Name: ${{ inputs.package_artifact_name }}" || true
+          git push

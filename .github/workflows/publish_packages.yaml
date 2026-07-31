@@ -1,0 +1,75 @@
+name: Publish Packages
+
+on:
+  push:
+    branches: [main]
+    paths: ["pool/**"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install Aptly and GPG
+        run: sudo apt-get update && sudo apt-get install -y aptly gpg
+
+      - name: Import GPG Key
+        run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+      - name: Rebuild APT Repository
+        run: |
+          # Keep track of the APT repos we create.
+          apt_repos=""
+
+          # Loop through every subdirectory inside the pool directory.
+          for distribution_directory in "./pool/"*/; do
+            # Skip if pool is completely empty.
+            [ -d "${distribution_directory}" ] || continue
+            
+            # Extract just the directory name.
+            distribution=$(basename "${distribution_directory}")
+            
+            echo "Configuring repository for distribution: ${distribution}"
+            
+            # Create the aptly repository for this specific distribution.
+            aptly repo create -distribution="${distribution}" -component=main "sfg-${distribution}"
+            
+            # Add all packages found in that distribution's directory.
+            aptly repo add "sfg-${distribution}" "${distribution_directory}" || true
+            
+            # Append this repo name to our list.
+            apt_repos="${apt_repos} sfg-${distribution}"
+          done
+
+          if [ -n "${apt_repos}" ]; then
+            echo "Publishing distributions: ${apt_repos}"
+            
+            aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" ${apt_repos} ".aptly/public"
+          else
+            echo "Warning: No distributions found in the pool directory."
+
+            # Create an empty directory so the GitHub Pages upload step doesn't crash.
+            mkdir -p ".aptly/public"
+          fi
+
+      - name: Publish GPG Public Key
+        run: |
+          gpg --armor --export "${{ secrets.GPG_KEY_ID }}" > ".aptly/public/sfg-apt-repo-public.gpg"
+          echo "GPG public key published to '.aptly/public/sfg-apt-repo-public.gpg'."
+
+      - name: Publish Artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ".aptly/public"
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
