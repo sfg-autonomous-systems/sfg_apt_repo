@@ -40,10 +40,10 @@ Your repository must have access to the `SFG_APT_REPO_PAT`.
 
 ### Example GitHub Actions Workflow
 
-Add the following structure to `.github/workflows/release.yaml` inside your own repository:
+Add the following structure to `.github/workflows/example_workflow.yaml` inside your own repository:
 
 ```yaml
-name: Build and Publish Package
+name: Example Workflow
 
 on:
   push:
