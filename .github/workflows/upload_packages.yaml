@@ -12,7 +12,7 @@ on:
         required: true
         type: string
     secrets:
-      ORG_PAT:
+      SFG_APT_REPO_PAT:
         required: true
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: "sfg-autonomous-systems/sfg_apt_repo"
-          token: ${{ secrets.ORG_PAT }}
+          token: ${{ secrets.SFG_APT_REPO_PAT }}
           path: "sfg_apt_repo"
           lfs: true
 
