@@ -1,5 +1,11 @@
 {
     "recommendations": [
-        "redhat.vscode-yaml"
+        // General extensions.
+        "redhat.vscode-yaml",
+        // Python extensions.
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
+        "ms-python.python",
+        "njpwerner.autodocstring",
     ]
 }

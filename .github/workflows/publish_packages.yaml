@@ -25,6 +25,23 @@ jobs:
       - name: Import GPG Key
         run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
+      - name: Create Static Files Directory
+        run: mkdir -p ".aptly/public"
+
+      - name: Rebuild SFG Rosdep Index
+        run: |
+          sudo apt-get install -y python3-yaml
+          python3 scripts/rebuild_rosdep_index.py
+
+      - name: Rebuild SFG Config Package
+        run: |
+          dpkg-deb --build "config" "sfg-config.deb"
+
+          for distribution_directory in "./pool/"*/; do
+            [ -d "${distribution_directory}" ] || continue
+            cp "sfg-config.deb" "${distribution_directory}/"
+          done
+
       - name: Rebuild APT Repository
         run: |
           # Keep track of the APT repos we create.
@@ -54,16 +71,9 @@ jobs:
             echo "Publishing distributions: ${apt_repos}"
             
             aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" ${apt_repos} ".aptly/public"
-          else
-            echo "Warning: No distributions found in the pool directory."
-
-            # Create an empty directory so the GitHub Pages upload step doesn't crash.
-            mkdir -p ".aptly/public"
           fi
 
-      - name: Publish GPG Public Key
-        run: |
-          gpg --armor --export "${{ secrets.GPG_KEY_ID }}" > ".aptly/public/sfg-apt-repo-public.gpg"
+          gpg --armor --export "${{ secrets.GPG_KEY_ID }}" >".aptly/public/sfg-apt-repo-public.gpg"
           echo "GPG public key published to '.aptly/public/sfg-apt-repo-public.gpg'."
 
       - name: Publish Artifact for GitHub Pages

@@ -1,7 +1,17 @@
 {
+    // General settings.
     "editor.formatOnSave": true,
     "[yaml]": {
         "editor.tabSize": 2,
         "editor.indentSize": "tabSize"
     },
+    // Python settings.
+    "python.languageServer": "Pylance",
+    "debugpy.debugJustMyCode": false,
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    }
 }
