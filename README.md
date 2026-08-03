@@ -2,7 +2,7 @@
 
 This repository hosts the official APT packages for SFG Autonomous Systems. The packages contained in this repository are generated via GitHub Actions and hosted via GitHub Pages.
 
-## For Users: Adding this Repository to Your System
+## For Users: Adding This Repository to Your System
 
 To install software from this repository, you need to add our public GPG key and configure APT to pull from our GitHub Pages site:
 
