@@ -19,8 +19,16 @@ jobs:
         with:
           lfs: true
 
-      - name: Install Aptly and GPG
-        run: sudo apt-get update && sudo apt-get install -y aptly gpg
+      - name: Install GPG and Aptly
+        run: |
+          sudo apt-get update && sudo apt-get install -y gpg curl
+
+          # Add the official Aptly repository to get the latest version.
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://www.aptly.info/pubkey.txt | sudo gpg --dearmor -o /etc/apt/keyrings/aptly.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/aptly.gpg] http://repo.aptly.info/ squeeze main" | sudo tee /etc/apt/sources.list.d/aptly.list
+
+          sudo apt-get update && sudo apt-get install -y aptly
 
       - name: Import GPG Key
         run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
