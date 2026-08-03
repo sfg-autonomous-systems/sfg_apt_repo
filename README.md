@@ -90,15 +90,15 @@ This repository relies on a custom GitHub App to securely authenticate and commi
 
 ### Configure Organization Secrets
 
-> [!important]
-> Once the organization secret is created, delete the downloaded `.pem` file. If the key is ever lost or compromised, do not attempt to recover it; generate a new key and update the secret instead.
-
 1. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following secrets:
     | Name                           | Value                                                                 |
     | ------------------------------ | --------------------------------------------------------------------- |
     | `SFG_APT_REPO_UPLOADER_APP_ID` | Paste the app ID copied previously.                                   |
     | `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. |
 2. Under **Repository access**, ensure these secrets are accessible by this repository as well as any other worker repositories that will be calling the upload workflow.
+
+> [!important]
+> Once the organization secret is created, delete the downloaded `.pem` file. If the key is ever lost or compromised, do not attempt to recover it; generate a new key and update the secret instead.
 
 ### Install the App
 
@@ -112,9 +112,6 @@ This repository relies on a custom GitHub App to securely authenticate and commi
 5. Click **Install**.
 
 ### Configure GPG Repository Signing
-
-> [!important]
-> Once the GPG key is generated and the secret is created, delete the private key from your local machine. If the key is ever lost or compromised, do not attempt to recover it; generate a new key and update the secret instead.
 
 Aptly requires a passphrase-less GPG key to sign the repository automatically during the GitHub Actions deployment.
 
@@ -142,3 +139,6 @@ Aptly requires a passphrase-less GPG key to sign the repository automatically du
     | ----------------- | ------------------------ |
     | `GPG_KEY_ID`      | The 16-character key ID. |
     | `GPG_PRIVATE_KEY` | The GPG private key.     |
+
+> [!important]
+> Once the GPG key is generated and the secret is created, delete the private key from your local machine. If the key is ever lost or compromised, do not attempt to recover it; generate a new key and update the secret instead.
