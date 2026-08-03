@@ -108,6 +108,7 @@ As outlined in our [access and security policy](https://github.com/sfg-autonomou
 
 1. Navigate to this organization's **Settings** > **Repository** > **Rulesets** and click on the ruleset that was imported as part of the access and security policy.
 2. Under **Bypass list** click **Add bypass** and select the `sfg-apt-repo-uploader` app.
+3. Select **Save changes** to persist the bypass.
 
 ### Install the App
 
