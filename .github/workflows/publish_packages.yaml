@@ -77,8 +77,8 @@ jobs:
 
           if [ -n "${apt_repos}" ]; then
             echo "Publishing distributions: ${apt_repos}"
-            
-            aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" ${apt_repos} ".aptly/public"
+            aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" ${apt_repos}
+            cp -r ~/.aptly/public/* ".aptly/public/"
           fi
 
           gpg --armor --export "${{ secrets.GPG_KEY_ID }}" >".aptly/public/sfg-apt-repo-public.gpg"
