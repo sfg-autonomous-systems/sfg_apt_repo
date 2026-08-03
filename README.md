@@ -102,9 +102,9 @@ This repository relies on a custom GitHub App to securely authenticate and commi
     | `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. |
 2. Under **Repository access**, ensure these secrets are accessible by this repository as well as any other worker repositories that will be calling the upload workflow.
 
-### Allow `sfg-apt-repo-uploader` to Commit the Protected Main Branch
+### Allow `sfg-apt-repo-uploader` to Commit to Protected Branches
 
-As outlined in our [access and security policy](https://github.com/sfg-autonomous-systems/sfg_docs/blob/main/docs/access_and_security_policy.md), the branch named `main` (among others) cannot be pushed to directly. To allow the GitHub App to push new packages, you must explicitly allow it to bypass this protection:
+As outlined in our [access and security policy](https://github.com/sfg-autonomous-systems/sfg_docs/blob/main/docs/access_and_security_policy.md), certain branches cannot be pushed to directly. To allow the GitHub App to push new packages, you must explicitly allow it to bypass this protection:
 
 1. Navigate to this organization's **Settings** > **Repository** > **Rulesets** and click on the ruleset that was imported as part of the access and security policy.
 2. Under **Bypass list** click **Add bypass** and select the `sfg-apt-repo-uploader` app.
