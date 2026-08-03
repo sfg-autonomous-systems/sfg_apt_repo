@@ -112,3 +112,33 @@ This repository relies on a custom GitHub App to securely authenticate and commi
 3. Click **Install** next to the `sfg-autonomous-systems` organization.
 4. Under **Repository access** check **Only select repositories** and explicitly select `sfg_apt_repo`.
 5. Click **Install**.
+
+### Configure GPG Repository Signing
+
+> [!important]
+> Once the GPG key is generated and the secret is created, delete the private key from your local machine. If the key is ever lost or compromised, do not attempt to recover it; generate a new key and update the secret instead.
+
+Aptly requires a passphrase-less GPG key to sign the repository automatically during the GitHub Actions deployment.
+
+1. **Generate the Key:** Run the following on a secure local machine to generate a CI/CD-friendly key:
+    ```bash
+    cat > key-config <<EOF
+        %echo Generating a standard key
+        Key-Type: default
+        Subkey-Type: default
+        Name-Real: SFG APT Repository
+        Name-Email: projekt-sfg-autonomous-systems@hs-esslingen.de
+        Expire-Date: 0
+        %no-protection
+        %commit
+        %echo done
+    EOF
+
+    gpg --batch --generate-key "key-config"
+    rm "key-config"
+    ```
+2. **Retrieve the Key ID:** Run `gpg --list-secret-keys --keyid-format=long` and note down the 16-character key ID.
+3. **Export the Private Key:** Run `gpg --armor --export-secret-keys YOUR_KEY_ID`.
+4. **Save Repository Secrets:** Navigate to the `sfg_apt_repo` repository's **Settings** > **Secrets and variables** > **Actions** and add two **Repository secrets**:
+    * `GPG_KEY_ID`: The 16-character Key ID.
+    * `GPG_PRIVATE_KEY`: The entire exported private key block.
