@@ -124,7 +124,7 @@ Aptly requires a passphrase-less GPG key to sign the repository automatically du
         %echo Generating a standard key
         Key-Type: default
         Subkey-Type: default
-        Name-Real: SFG APT Repository
+        Name-Real: SFG APT Repo
         Name-Email: projekt-sfg-autonomous-systems@hs-esslingen.de
         Expire-Date: 0
         %no-protection
