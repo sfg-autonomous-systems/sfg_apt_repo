@@ -12,7 +12,9 @@ on:
         required: true
         type: string
     secrets:
-      SFG_APT_REPO_PAT:
+      SFG_APT_REPO_UPLOADER_APP_ID:
+        required: true
+      SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY:
         required: true
 
 jobs:
@@ -25,11 +27,20 @@ jobs:
           name: ${{ inputs.package_artifact_name }}
           path: ./packages
 
+      - name: Generate Token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_ID }}
+          private-key: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: "sfg_apt_repo"
+
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           repository: "sfg-autonomous-systems/sfg_apt_repo"
-          token: ${{ secrets.SFG_APT_REPO_PAT }}
+          token: ${{ steps.generate-token.outputs.token }}
           path: "sfg_apt_repo"
           lfs: true
 
@@ -39,8 +50,8 @@ jobs:
           cp "./packages/"*.deb "sfg_apt_repo/pool/${{ inputs.distribution }}/"
 
           cd "sfg_apt_repo"
-          git config user.name "SFG Autonomous Systems - Machine User"
-          git config user.email "projekt-sfg-autonomous-systems@hs-esslingen.de"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           number_of_new_packages=0
 

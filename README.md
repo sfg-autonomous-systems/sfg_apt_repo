@@ -19,7 +19,7 @@ To install software from this repository, you need to add our public GPG key and
 
 3. **Add the APT Repository**
     ```bash
-    echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/sfg-apt-repo.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/sfg-apt-repo.list
+    echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/sfg-apt-repo.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo $(lsb_release -cs) main" | sudo tee "/etc/apt/sources.list.d/sfg-apt-repo.list"
     ```
 
 4. **Update Package Lists**
@@ -36,7 +36,7 @@ To publish a package to this repository, your worker repository must build the p
 
 ### Prerequisites
 
-Your repository must have access to the `SFG_APT_REPO_PAT`.
+Your repository must have access to the organization-level secrets `SFG_APT_REPO_UPLOADER_APP_ID` and `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY`.
 
 ### Example GitHub Actions Workflow
 
@@ -72,8 +72,53 @@ jobs:
     # 3. Call the reusable workflow in the APT repository.
     uses: sfg-autonomous-systems/sfg_apt_repo/.github/workflows/upload_packages.yaml@main
     with:
-      package_artifact_name: 'built-deb-packages' # Must match the upload name above.
-      distribution: 'jammy'                       # Target distro (e.g. 'jammy' or 'noble').
+      package_artifact_name: built-deb-packages # Must match the upload name above.
+      distribution: jammy                       # Target distro (e.g. 'jammy' or 'noble').
     secrets:
-      SFG_APT_REPO_PAT: ${{ secrets.SFG_APT_REPO_PAT }}
+      SFG_APT_REPO_UPLOADER_APP_ID: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_ID }}
+      SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY }}
 ```
+
+## For Admins: Setup Instructions
+
+This repository relies on a custom GitHub App to securely authenticate and commit new `.deb` packages automatically.
+
+### Setup the GitHub App
+
+1. Navigate to the organization's **Settings** > **Developer settings** > **GitHub Apps**.
+2. Click **New GitHub App** and configure the following properties:
+    | Setting | Value |
+    | --- | --- |
+    | **GitHub App name** | `sfg-apt-repo-uploader` |
+    | **Homepage URL** | `https://github.com/sfg-autonomous-systems/sfg_apt_repo` |
+    | **Webhook > Active** | Unchecked |
+    | **Permissions > Repository permissions** | Set **Contents** to **Read and write** |
+    | **Where can this GitHub App be installed?** | `Only on this account` |
+3. Click **Create GitHub App**.
+4. On the resulting page, copy the **App ID** from the **About** section and save it temporarily.
+5. Scroll down to **Private keys** and click **Generate a private key**. A `.pem` file will download to your machine.
+
+### Configure Organization Secrets
+
+> [!warning]
+> Once the organization secret is created, delete the downloaded `.pem` file. If the key is ever lost or compromised, do not attempt to recover it; generate a new key and update the secret.
+
+1. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions**.
+2. Click **New organization secret** and create the following secret for the app ID:
+    * **Name:** `SFG_APT_REPO_UPLOADER_APP_ID`
+    * **Value:** Paste the app ID copied previously.
+3. Click **New organization secret** again and create the secret for the private key:
+    * **Name:** `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY`
+    * **Value:** Paste the **entire** contents of the downloaded `.pem` file.
+4. Under **Repository access**, ensure these secrets are accessible by `sfg_apt_repo` as well as any other worker repositories that will be calling the upload workflow.
+
+### Install the App
+
+> [!note]
+> The GitHub App itself only needs to be installed on the repository it pushes to, not the repositories that trigger the workflow.
+
+1. Navigate back to the organization's **Settings** > **Developer settings** > **GitHub Apps** and click on **Edit** next to the `sfg-apt-repo-uploader` app.
+2. In the left sidebar, click **Install App**.
+3. Click **Install** next to the `sfg-autonomous-systems` organization.
+4. Under **Repository access** check **Only select repositories** and explicitly select `sfg_apt_repo`.
+5. Click **Install**.
