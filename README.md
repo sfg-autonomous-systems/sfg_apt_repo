@@ -93,14 +93,12 @@ This repository relies on a custom GitHub App to securely authenticate and commi
 > [!important]
 > Once the organization secret is created, delete the downloaded `.pem` file. If the key is ever lost or compromised, do not attempt to recover it; generate a new key and update the secret instead.
 
-1. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions**.
-2. Click **New organization secret** and create the following secret for the app ID:
-    * **Name:** `SFG_APT_REPO_UPLOADER_APP_ID`
-    * **Value:** Paste the app ID copied previously.
-3. Click **New organization secret** again and create the secret for the private key:
-    * **Name:** `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY`
-    * **Value:** Paste the **entire** contents of the downloaded `.pem` file.
-4. Under **Repository access**, ensure these secrets are accessible by this repository as well as any other worker repositories that will be calling the upload workflow.
+1. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following secrets:
+    | Name                           | Value                                                                 |
+    | ------------------------------ | --------------------------------------------------------------------- |
+    | `SFG_APT_REPO_UPLOADER_APP_ID` | Paste the app ID copied previously.                                   |
+    | `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. |
+2. Under **Repository access**, ensure these secrets are accessible by this repository as well as any other worker repositories that will be calling the upload workflow.
 
 ### Install the App
 
@@ -120,7 +118,7 @@ This repository relies on a custom GitHub App to securely authenticate and commi
 
 Aptly requires a passphrase-less GPG key to sign the repository automatically during the GitHub Actions deployment.
 
-1. **Generate the Key:** Run the following on a secure local machine to generate a CI/CD-friendly key:
+1. Run the following on a secure local machine to generate a GPG key:
     ```bash
     cat > key-config <<EOF
         %echo Generating a standard key
@@ -137,8 +135,10 @@ Aptly requires a passphrase-less GPG key to sign the repository automatically du
     gpg --batch --generate-key "key-config"
     rm "key-config"
     ```
-2. **Retrieve the Key ID:** Run `gpg --list-secret-keys --keyid-format=long` and note down the 16-character key ID.
-3. **Export the Private Key:** Run `gpg --armor --export-secret-keys YOUR_KEY_ID`.
-4. **Save Repository Secrets:** Navigate to the `sfg_apt_repo` repository's **Settings** > **Secrets and variables** > **Actions** and add two **Repository secrets**:
-    * `GPG_KEY_ID`: The 16-character Key ID.
-    * `GPG_PRIVATE_KEY`: The entire exported private key block.
+2. Run `gpg --list-secret-keys --keyid-format=long` and note down the 16-character key ID.
+3. Run `gpg --armor --export-secret-keys <YOUR_KEY_ID>` and copy the GPG private key.
+4. Navigate to this repository's **Settings** > **Secrets and variables** > **Actions** and add the following secrets:
+    | Name              | Value                    |
+    | ----------------- | ------------------------ |
+    | `GPG_KEY_ID`      | The 16-character key ID. |
+    | `GPG_PRIVATE_KEY` | The GPG private key.     |
