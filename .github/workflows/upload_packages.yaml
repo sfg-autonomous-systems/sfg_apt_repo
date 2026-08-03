@@ -47,7 +47,6 @@ jobs:
       - name: Commit Packages
         run: |
           mkdir -p "sfg_apt_repo/pool/${{ inputs.distribution }}"
-          cp "./packages/"*.deb "sfg_apt_repo/pool/${{ inputs.distribution }}/"
 
           cd "sfg_apt_repo"
           git config user.name "github-actions[bot]"
