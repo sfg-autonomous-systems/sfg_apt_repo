@@ -1,6 +1,6 @@
 # SFG APT Repo
 
-This repository hosts the official APT packages for SFG Autonomous Systems. The repository is automatically generated and hosted via GitHub Pages.
+This repository hosts the official APT packages for SFG Autonomous Systems. The packages contained in this repository are generated via GitHub Actions and hosted via GitHub Pages.
 
 ## For Users: Adding this Repository to Your System
 
@@ -100,8 +100,8 @@ This repository relies on a custom GitHub App to securely authenticate and commi
 
 ### Configure Organization Secrets
 
-> [!warning]
-> Once the organization secret is created, delete the downloaded `.pem` file. If the key is ever lost or compromised, do not attempt to recover it; generate a new key and update the secret.
+> [!important]
+> Once the organization secret is created, delete the downloaded `.pem` file. If the key is ever lost or compromised, do not attempt to recover it; generate a new key and update the secret instead.
 
 1. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions**.
 2. Click **New organization secret** and create the following secret for the app ID:
@@ -110,7 +110,7 @@ This repository relies on a custom GitHub App to securely authenticate and commi
 3. Click **New organization secret** again and create the secret for the private key:
     * **Name:** `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY`
     * **Value:** Paste the **entire** contents of the downloaded `.pem` file.
-4. Under **Repository access**, ensure these secrets are accessible by `sfg_apt_repo` as well as any other worker repositories that will be calling the upload workflow.
+4. Under **Repository access**, ensure these secrets are accessible by this repository as well as any other worker repositories that will be calling the upload workflow.
 
 ### Install the App
 
