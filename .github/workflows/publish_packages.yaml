@@ -36,12 +36,12 @@ jobs:
       - name: Create Static Files Directory
         run: mkdir -p ".aptly/public"
 
-      - name: Rebuild SFG Rosdep Index
+      - name: Rebuild Rosdep Index
         run: |
           sudo apt-get install -y python3-yaml
           python3 scripts/rebuild_rosdep_index.py
 
-      - name: Rebuild SFG Config Package
+      - name: Rebuild Config Package
         run: |
           dpkg-deb --build "config" "sfg-config.deb"
 
