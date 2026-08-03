@@ -87,13 +87,13 @@ This repository relies on a custom GitHub App to securely authenticate and commi
 
 1. Navigate to the organization's **Settings** > **Developer settings** > **GitHub Apps**.
 2. Click **New GitHub App** and configure the following properties:
-    | Setting | Value |
-    | --- | --- |
-    | **GitHub App name** | `sfg-apt-repo-uploader` |
-    | **Homepage URL** | `https://github.com/sfg-autonomous-systems/sfg_apt_repo` |
-    | **Webhook > Active** | Unchecked |
-    | **Permissions > Repository permissions** | Set **Contents** to **Read and write** |
-    | **Where can this GitHub App be installed?** | `Only on this account` |
+    | Setting                                     | Value                                                    |
+    | ------------------------------------------- | -------------------------------------------------------- |
+    | **GitHub App name**                         | `sfg-apt-repo-uploader`                                  |
+    | **Homepage URL**                            | `https://github.com/sfg-autonomous-systems/sfg_apt_repo` |
+    | **Webhook > Active**                        | Unchecked                                                |
+    | **Permissions > Repository permissions**    | Set **Contents** to **Read and write**                   |
+    | **Where can this GitHub App be installed?** | `Only on this account`                                   |
 3. Click **Create GitHub App**.
 4. On the resulting page, copy the **App ID** from the **About** section and save it temporarily.
 5. Scroll down to **Private keys** and click **Generate a private key**. A `.pem` file will download to your machine.
