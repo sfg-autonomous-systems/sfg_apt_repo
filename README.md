@@ -121,6 +121,11 @@ As outlined in our [access and security policy](https://github.com/sfg-autonomou
 4. Under **Repository access** check **Only select repositories** and explicitly select `sfg_apt_repo`.
 5. Click **Install**.
 
+### Allow Other Repositories to Call the Upload Workflow
+
+1. Navigate to this repository's **Settings** > **Actions** > **General**.
+2. Under **Workflow permissions** > **Access** select **Accessible from repositories in the [...] organization**
+
 ### Configure GPG Repository Signing
 
 > [!important]
