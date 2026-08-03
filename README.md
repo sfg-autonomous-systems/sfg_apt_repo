@@ -26,7 +26,9 @@ To publish a package to this repository, your worker repository must build the p
 
 ### Prerequisites
 
-Your repository must have access to the organization-level secrets `SFG_APT_REPO_UPLOADER_APP_ID` and `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY`.
+Your repository must have access to the following organization-level secrets:
+* `SFG_APT_REPO_UPLOADER_APP_ID`
+* `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY`
 
 ### Example GitHub Actions Workflow
 
