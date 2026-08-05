@@ -23,7 +23,7 @@ def main() -> None:
         for package_file in distribution_directory.glob("*.deb"):
             try:
                 output = subprocess.check_output(
-                    ["dpkg-deb", "-f", str(package_file), "Package"], text=True
+                    ["dpkg-deb", "-f", package_file.as_posix(), "Package"], text=True
                 )
                 apt_package = output.strip()
             except subprocess.CalledProcessError:
