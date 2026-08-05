@@ -124,7 +124,7 @@ As outlined in our [access and security policy](https://github.com/sfg-autonomou
 ### Allow Other Repositories to Call the Upload Workflow
 
 1. Navigate to this repository's **Settings** > **Actions** > **General**.
-2. Under **Workflow permissions** > **Access** select **Accessible from repositories in the [...] organization**
+2. Under **Workflow permissions** > **Access** select **Accessible from repositories in the [...] organization**.
 
 ### Configure GPG Repository Signing
 
