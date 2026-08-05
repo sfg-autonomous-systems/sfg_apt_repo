@@ -34,20 +34,20 @@ jobs:
         run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
       - name: Create Static Files Directory
-        run: mkdir -p ".aptly/public"
+        run: mkdir -p "github-pages"
 
       - name: Rebuild Rosdep Index
         run: |
           sudo apt-get install -y python3-yaml
           python3 scripts/rebuild_rosdep_index.py
 
-      - name: Rebuild Config Package
+      - name: Rebuild Rosdep Index Package
         run: |
-          dpkg-deb --build "config" "sfg-config.deb"
+          dpkg-deb --build "src/sfg-rosdep-index" "sfg-rosdep-index.deb"
 
           for distribution_directory in "./packages/"*/; do
             [ -d "${distribution_directory}" ] || continue
-            cp "sfg-config.deb" "${distribution_directory}/"
+            cp "sfg-rosdep-index.deb" "${distribution_directory}/"
           done
 
       - name: Rebuild APT Repository
@@ -78,16 +78,16 @@ jobs:
           if [ -n "${apt_repos}" ]; then
             echo "Publishing distributions: ${apt_repos}"
             aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" ${apt_repos}
-            cp -r ~/.aptly/public/* ".aptly/public/"
+            cp -r ~/.aptly/public/* "github-pages/"
           fi
 
-          gpg --armor --export "${{ secrets.GPG_KEY_ID }}" >".aptly/public/sfg-apt-repo-public.gpg"
-          echo "GPG public key published to '.aptly/public/sfg-apt-repo-public.gpg'."
+          gpg --armor --export "${{ secrets.GPG_KEY_ID }}" >"github-pages/sfg-apt-repo-public.gpg"
+          echo "GPG public key published to 'github-pages/sfg-apt-repo-public.gpg'."
 
       - name: Publish Artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ".aptly/public"
+          path: "github-pages"
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4

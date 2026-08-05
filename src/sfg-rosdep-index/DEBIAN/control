@@ -1,0 +1,5 @@
+Package: sfg-rosdep-index
+Version: 1.0.0
+Architecture: all
+Maintainer: SFG Autonomous Systems <projekt-sfg-autonomous-systems@hs-esslingen.de>
+Description: Packages containing additional rosdep rules for the SFG Autonomous Systems project.

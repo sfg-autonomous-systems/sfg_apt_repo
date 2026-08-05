@@ -45,10 +45,10 @@ def main() -> None:
             rosdep_index[ros_package]["ubuntu"][distribution_name] = [apt_package]
             rosdep_index[ros_package]["debian"][distribution_name] = [apt_package]
 
-    output_directory = Path(__file__).parent.parent / ".aptly" / "public"
+    output_directory = Path(__file__).parent.parent / "github-pages"
     output_directory.mkdir(parents=True, exist_ok=True)
 
-    with open(output_directory / "rosdep_index.yaml", "w") as file:
+    with open(output_directory / "rosdep_rules.yaml", "w") as file:
         yaml.dump(rosdep_index, file, default_flow_style=False)
 
 

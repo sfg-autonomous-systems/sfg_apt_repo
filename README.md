@@ -4,6 +4,8 @@ This repository hosts the official APT packages for SFG Autonomous Systems. The 
 
 ## For Users: Adding This Repository to Your System
 
+### Add the APT Repository
+
 To install software from this repository, you need to add our public GPG key and configure APT to pull from our GitHub Pages site:
 
 ```bash
@@ -16,6 +18,19 @@ echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/sfg-apt-repo.gpg] http
 # Update package lists.
 sudo apt update
 ```
+
+### Configure `rosdep`
+
+If you are developing ROS packages that depend on custom SFG packages, you need to tell `rosdep` where to find our custom dependency rules. We provide a helper package that automatically configures this for you. Run the following commands to install the index and update your local `rosdep` cache:
+
+```bash
+# Install the custom rosdep index.
+sudo apt install -y sfg-rosdep-index
+# Update rosdep so it fetches our custom rules.
+rosdep update
+```
+
+Once completed, you can use `rosdep install` in your workspaces as usual, and it will automatically resolve our custom `ros-*` APT packages!
 
 ## For Developers: Publishing Packages
 
@@ -135,7 +150,7 @@ Aptly requires a passphrase-less GPG key to sign the repository automatically du
 
 1. Run the following on a secure local machine to generate a GPG key:
     ```bash
-    cat > key-config <<EOF
+    cat >"key-config" <<EOF
         %echo Generating a standard key
         Key-Type: default
         Subkey-Type: default

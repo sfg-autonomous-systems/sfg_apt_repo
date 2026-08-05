@@ -1,5 +1,0 @@
-Package: sfg-config
-Version: 1.0.0
-Architecture: all
-Maintainer: SFG Autonomous Systems <projekt-sfg-autonomous-systems@hs-esslingen.de>
-Description: Configuration package for SFG Autonomous Systems.
