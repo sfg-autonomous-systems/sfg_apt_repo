@@ -46,7 +46,7 @@ jobs:
 
       - name: Commit Packages
         run: |
-          mkdir -p "sfg_apt_repo/pool/${{ inputs.distribution }}"
+          mkdir -p "sfg_apt_repo/packages/${{ inputs.distribution }}"
 
           cd "sfg_apt_repo"
           git config user.name "github-actions[bot]"
@@ -61,21 +61,21 @@ jobs:
             
             package_name=$(basename "${package}")
             
-            if [ -f "pool/${{ inputs.distribution }}/${package_name}" ]; then
-              checksum_existing=$(sha256sum "pool/${{ inputs.distribution }}/${package_name}" | awk '{print $1}')
+            if [ -f "packages/${{ inputs.distribution }}/${package_name}" ]; then
+              checksum_existing=$(sha256sum "packages/${{ inputs.distribution }}/${package_name}" | awk '{print $1}')
               checksum_new=$(sha256sum "${package}" | awk '{print $1}')
 
               if [ "${checksum_existing}" = "${checksum_new}" ]; then
-                echo "Package ${package_name} already exists in 'pool/${{ inputs.distribution }}' with the same checksum. Skipping."
+                echo "Package ${package_name} already exists in 'packages/${{ inputs.distribution }}' with the same checksum. Skipping."
                 continue
               else
-                echo "Package ${package_name} already exists in 'pool/${{ inputs.distribution }}' but has a different checksum. Overwriting."
+                echo "Package ${package_name} already exists in 'packages/${{ inputs.distribution }}' but has a different checksum. Overwriting."
               fi
             fi  
             
-            echo "Adding ${package_name} to pool."
-            cp "${package}" "pool/${{ inputs.distribution }}/"
-            git add "pool/${{ inputs.distribution }}/${package_name}"
+            echo "Adding ${package_name} to packages."
+            cp "${package}" "packages/${{ inputs.distribution }}/"
+            git add "packages/${{ inputs.distribution }}/${package_name}"
             number_of_new_packages=$((number_of_new_packages + 1))
           done
 

@@ -8,13 +8,13 @@ import yaml
 
 
 def main() -> None:
-    pool_directory = Path(__file__).parent.parent / "pool"
+    packages_directory = Path(__file__).parent.parent / "packages"
     rosdep_index: dict[str, Any] = {}
 
-    if not pool_directory.exists():
+    if not packages_directory.exists():
         return
 
-    for distribution_directory in pool_directory.iterdir():
+    for distribution_directory in packages_directory.iterdir():
         if not distribution_directory.is_dir():
             continue
 

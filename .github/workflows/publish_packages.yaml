@@ -3,7 +3,7 @@ name: Publish Packages
 on:
   push:
     branches: [main]
-    paths: ["pool/**"]
+    paths: ["packages/**"]
 
 permissions:
   contents: read
@@ -45,7 +45,7 @@ jobs:
         run: |
           dpkg-deb --build "config" "sfg-config.deb"
 
-          for distribution_directory in "./pool/"*/; do
+          for distribution_directory in "./packages/"*/; do
             [ -d "${distribution_directory}" ] || continue
             cp "sfg-config.deb" "${distribution_directory}/"
           done
@@ -55,9 +55,9 @@ jobs:
           # Keep track of the APT repos we create.
           apt_repos=""
 
-          # Loop through every subdirectory inside the pool directory.
-          for distribution_directory in "./pool/"*/; do
-            # Skip if pool is completely empty.
+          # Loop through every subdirectory inside the packages directory.
+          for distribution_directory in "./packages/"*/; do
+            # Skip if directory is completely empty.
             [ -d "${distribution_directory}" ] || continue
             
             # Extract just the directory name.
