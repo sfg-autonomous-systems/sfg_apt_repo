@@ -9,7 +9,7 @@ import yaml
 
 def main() -> None:
     packages_directory = Path(__file__).parent.parent / "packages"
-    rosdep_index: dict[str, Any] = {}
+    rosdep_rules: dict[str, Any] = {}
 
     if not packages_directory.exists():
         return
@@ -37,20 +37,20 @@ def main() -> None:
 
             ros_package = match.group(1).replace("-", "_")
 
-            if ros_package not in rosdep_index:
-                rosdep_index[ros_package] = {
+            if ros_package not in rosdep_rules:
+                rosdep_rules[ros_package] = {
                     "ubuntu": {},
                     "debian": {},
                 }
 
-            rosdep_index[ros_package]["ubuntu"][distribution_name] = [apt_package]
-            rosdep_index[ros_package]["debian"][distribution_name] = [apt_package]
+            rosdep_rules[ros_package]["ubuntu"][distribution_name] = [apt_package]
+            rosdep_rules[ros_package]["debian"][distribution_name] = [apt_package]
 
     output_directory = Path(__file__).parent.parent / "github-pages"
     output_directory.mkdir(parents=True, exist_ok=True)
 
     with open(output_directory / "rosdep_rules.yaml", "w") as file:
-        yaml.dump(rosdep_index, file, default_flow_style=False)
+        yaml.dump(rosdep_rules, file, default_flow_style=False)
 
 
 if __name__ == "__main__":

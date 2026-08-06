@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths: ["packages/**"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,8 +26,8 @@ jobs:
 
           # Add the official Aptly repository to get the latest version.
           sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL https://www.aptly.info/pubkey.txt | sudo gpg --dearmor -o /etc/apt/keyrings/aptly.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/aptly.gpg] http://repo.aptly.info/ squeeze main" | sudo tee /etc/apt/sources.list.d/aptly.list
+          curl -fsSL "https://www.aptly.info/pubkey.txt" | sudo gpg --dearmor -o "/etc/apt/keyrings/aptly.gpg"
+          echo "deb [signed-by=/etc/apt/keyrings/aptly.gpg] http://repo.aptly.info/ squeeze main" | sudo tee "/etc/apt/sources.list.d/aptly.list"
 
           sudo apt-get update && sudo apt-get install -y aptly
 
@@ -36,10 +37,10 @@ jobs:
       - name: Create Static Files Directory
         run: mkdir -p "github-pages"
 
-      - name: Rebuild Rosdep Index
+      - name: Rebuild Rosdep Rules
         run: |
           sudo apt-get install -y python3-yaml
-          python3 scripts/rebuild_rosdep_index.py
+          "scripts/rebuild_rosdep_rules.py"
 
       - name: Rebuild Rosdep Index Package
         run: |
@@ -78,11 +79,15 @@ jobs:
           if [ -n "${apt_repos}" ]; then
             echo "Publishing distributions: ${apt_repos}"
             aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" ${apt_repos}
-            cp -r ~/.aptly/public/* "github-pages/"
+            cp -r "${HOME}/.aptly/public/." "github-pages/"
           fi
 
           gpg --armor --export "${{ secrets.GPG_KEY_ID }}" >"github-pages/sfg-apt-repo-public.gpg"
           echo "GPG public key published to 'github-pages/sfg-apt-repo-public.gpg'."
+
+      - name: Rebuild Directory Listings
+        run: |
+          "scripts/rebuild_directory_listings.py" "github-pages"
 
       - name: Publish Artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3
