@@ -18,7 +18,7 @@ index_template = """<!DOCTYPE html>
 </head>
 <body class="markdown-body">
   <h1>SFG APT Repo</h1>
-  <p>This repository hosts the official APT packages for <a href="https://github.com/sfg-autonomous-systems">SFG Autonomous Systems</a>. View the <a href="https://github.com/sfg-autonomous-systems/sfg_apt_repo">documentation</a> for setup instructions.</p>
+  <p>This repository hosts the official APT packages for <a href="https://github.com/sfg-autonomous-systems">SFG Autonomous Systems</a>. View the <a href="https://github.com/sfg-autonomous-systems/sfg_apt_repo#for-users-adding-this-repository-to-your-system">documentation</a> to learn how to add this repository to your system.</p>
   <h2>Directory Listing</h2>
   <ul>
     {{ index_contents }}
