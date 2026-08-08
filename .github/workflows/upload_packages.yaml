@@ -34,14 +34,14 @@ jobs:
           app-id: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_ID }}
           private-key: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: "sfg_apt_repo"
+          repositories: sfg_apt_repo
 
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          repository: "sfg-autonomous-systems/sfg_apt_repo"
+          repository: sfg-autonomous-systems/sfg_apt_repo
           token: ${{ steps.generate-token.outputs.token }}
-          path: "sfg_apt_repo"
+          path: sfg_apt_repo
           lfs: true
 
       - name: Commit Packages
