@@ -85,7 +85,7 @@ jobs:
             echo "${json}" | jq
             
             # Extract the true Git ref from the SLSA provenance.
-            attested_ref=$(echo "${json}" | jq -r '.[0].verificationResult.statement.predicate.buildDefinition.internalParameters.github.ref')
+            attested_ref=$(echo "${json}" | jq -r '.[0].verificationResult.statement.predicate.buildDefinition.externalParameters.workflow.ref')
             
             # Compare the cryptographically proven ref to the payload's claim.
             if [ "${attested_ref}" != "${{ inputs.ref }}" ]; then
