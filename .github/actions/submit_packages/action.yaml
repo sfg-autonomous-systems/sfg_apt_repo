@@ -43,6 +43,7 @@ runs:
     - name: Dispatch Event to Process Submitted Package(s)
       env:
         GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+      shell: bash
       run: |
         gh workflow run process_submitted_packages.yaml \
           --repo sfg-autonomous-systems/sfg_apt_repo \
