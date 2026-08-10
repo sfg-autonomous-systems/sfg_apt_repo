@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Generate Token
-        id: generate-f
+        id: generate-token
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_ID }}
