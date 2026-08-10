@@ -46,7 +46,7 @@ runs:
       shell: bash
       run: |
         gh workflow run process_submitted_packages.yaml \
-          --repo sfg-autonomous-systems/sfg_apt_repo \
+          --repo "sfg-autonomous-systems/sfg_apt_repo" \
           -f artifact_name="sfg-packages-${{ github.run_id }}" \
           -f distribution="${{ inputs.distribution }}" \
           -f ref="${{ github.ref }}" \

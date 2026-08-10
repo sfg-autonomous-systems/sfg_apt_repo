@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Generate Token
-        id: generate-token
+        id: generate-f
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_ID }}
@@ -82,6 +82,7 @@ jobs:
             
             # Verify the signature and ensure it came from the correct repository.
             json=$(gh attestation verify "${package}" --repo "${{ inputs.repository }}" --format json)
+            echo "${json}" | jq
             
             # Extract the true Git ref from the SLSA provenance.
             attested_ref=$(echo "${json}" | jq -r '.[0].verificationResult.statement.predicate.buildDefinition.internalParameters.github.ref')
