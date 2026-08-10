@@ -24,7 +24,7 @@ concurrency:
   group: apt-commit-queue
 
 jobs:
-  pull_and_commit:
+  process_submitted_packages:
     runs-on: ubuntu-22.04
     steps:
       - name: Generate Token
