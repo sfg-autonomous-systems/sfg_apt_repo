@@ -35,27 +35,32 @@ Once completed, you can use `rosdep install` in your workspaces as usual, and it
 ## For Developers: Publishing Packages
 
 > [!important]
-> This repository is completely automated. **Do not commit `.deb` files manually.**
+> This repository is completely automated. **Do not commit package files manually.**
 
-To publish a package to this repository, your worker repository must build the package, upload it as a temporary artifact, and then call this repository's reusable GitHub Action workflow. 
+To publish a package to this repository, your worker repository must build the package, and then call this repository's GitHub Action to securely submit it.
 
 ### Prerequisites
 
 Your repository must have access to the following organization-level secrets:
-* `SFG_APT_REPO_UPLOADER_APP_ID`
-* `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY`
+* `SFG_APT_REPO_DISPATCHER_APP_ID`
+* `SFG_APT_REPO_DISPATCHER_APP_PRIVATE_KEY`
 
 ### Example GitHub Actions Workflow
 
-Add the following structure to `.github/workflows/example_workflow.yaml` inside your own repository:
+Add the following structure to `.github/workflows/build_and_submit_packages.yaml` inside your own repository:
 
 ```yaml
-name: Example Workflow
+name: Build and Submit Package(s)
 
 on:
   push:
-    tags:
-      - 'v*.*.*'  # Example: Trigger on version tags.
+    branches: [main]
+    tags: [v*.*.*]
+
+permissions:
+  attestations: write
+  contents: read
+  id-token: write
 
 jobs:
   build:
@@ -63,83 +68,71 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # 1. Build package(s)...
+      # 1. Build your package(s)...
       # run: ...
       
-      # 2. Upload the built .deb file as a temporary artifact.
-      - name: Upload Package Artifact
-        uses: actions/upload-artifact@v4
+      # 2. Submit the built package(s) to the SFG APT repository.
+      - name: Submit Package(s)
+        uses: sfg-autonomous-systems/sfg_apt_repo/.github/actions/submit_packages@main
         with:
-          name: built-deb-packages  # An arbitrary upload name for the artifact.
-          path: ./*.deb             # Path to your generated .deb files.
-          retention-days: 1         # Only needed temporarily for the next job.
-
-  publish:
-    needs: build
-    # 3. Call the reusable workflow in the APT repository.
-    uses: sfg-autonomous-systems/sfg_apt_repo/.github/workflows/upload_packages.yaml@main
-    with:
-      package_artifact_name: built-deb-packages # Must match the upload name above.
-      distribution: jammy                       # Target distro (e.g. 'jammy' or 'noble').
-    secrets:
-      SFG_APT_REPO_UPLOADER_APP_ID: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_ID }}
-      SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY }}
+          dispatcher_app_id: ${{ secrets.SFG_APT_REPO_DISPATCHER_APP_ID }}
+          dispatcher_app_private_key: ${{ secrets.SFG_APT_REPO_DISPATCHER_APP_PRIVATE_KEY }}
+          distribution: jammy
+          path: ./*.deb
 ```
 
 ## For Admins: Setup Instructions
 
-This repository relies on a custom GitHub App to securely authenticate and commit new `.deb` packages automatically.
+This repository relies on a two-app architecture. This ensures worker repositories can request a package upload, but only the central repository has the cryptographic authority to download, verify, and commit the packages.
 
-### Setup the GitHub App
+### Set Up the Dispatcher App `sfg-apt-repo-dispatcher`
 
 1. Navigate to the organization's **Settings** > **Developer settings** > **GitHub Apps**.
 2. Click **New GitHub App** and configure the following properties:
     | Setting                                     | Value                                                    |
     | ------------------------------------------- | -------------------------------------------------------- |
-    | **GitHub App name**                         | `sfg-apt-repo-uploader`                                  |
+    | **GitHub App name**                         | `sfg-apt-repo-dispatcher`                                |
     | **Homepage URL**                            | `https://github.com/sfg-autonomous-systems/sfg_apt_repo` |
     | **Webhook > Active**                        | Unchecked                                                |
-    | **Permissions > Repository permissions**    | Set **Contents** to **Read and write**                   |
+    | **Permissions > Repository permissions**    | Set **Actions** to **Read and write**.                   |
     | **Where can this GitHub App be installed?** | `Only on this account`                                   |
 3. Click **Create GitHub App**.
-4. On the resulting page, copy the **App ID** from the **About** section and save it temporarily.
-5. Scroll down to **Private keys** and click **Generate a private key**. A `.pem` file will download to your machine.
+4. Save the **App ID** and generate a **Private key** (`.pem` file).
+5. In the left sidebar, click **Install App** and install it **only** on this repository.
+6. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization secrets:
+    | Name                                      | Value                                                        | Repository access |
+    | ----------------------------------------- | ------------------------------------------------------------ | ----------------- |
+    | `SFG_APT_REPO_DISPATCHER_APP_ID`          | Paste the app ID copied previously.                          | All repositories  |
+    | `SFG_APT_REPO_DISPATCHER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | All repositories  |
+7. Delete the downloaded `.pem` file.
 
-### Configure Organization Secrets
+### Set Up the Uploader App (`sfg-apt-repo-uploader`)
 
-> [!important]
-> Once the organization secret is created, delete the downloaded `.pem` file. If the key is ever lost or compromised, do not attempt to recover it; generate a new key and update the secret instead.
+1. Navigate to the organization's **Settings** > **Developer settings** > **GitHub Apps**.
+2. Click **New GitHub App** and configure the following properties:
+    | Setting                                     | Value                                                                        |
+    | ------------------------------------------- | ---------------------------------------------------------------------------- |
+    | **GitHub App name**                         | `sfg-apt-repo-uploader`                                                      |
+    | **Homepage URL**                            | `https://github.com/sfg-autonomous-systems/sfg_apt_repo`                     |
+    | **Webhook > Active**                        | Unchecked                                                                    |
+    | **Permissions > Repository permissions**    | Set **Contents** to **Read and write**.<br>Set **Actions** to **Read-only**. |
+    | **Where can this GitHub App be installed?** | `Only on this account`                                                       |
+3. Click **Create GitHub App**.
+4. Save the **App ID** and generate a **Private key** (`.pem` file).
+5. In the left sidebar, click **Install App** and install it on all repositories.
+6. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization:
+    | Name                                    | Value                                                        | Repository access |
+    | --------------------------------------- | ------------------------------------------------------------ | ----------------- |
+    | `SFG_APT_REPO_UPLOADER_APP_ID`          | Paste the app ID copied previously.                          | Selected repositories > this repository   |
+    | `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | Selected repositories > this repository   |
 
-1. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following secrets:
-    | Name                           | Value                                                                 |
-    | ------------------------------ | --------------------------------------------------------------------- |
-    | `SFG_APT_REPO_UPLOADER_APP_ID` | Paste the app ID copied previously.                                   |
-    | `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. |
-2. Under **Repository access**, ensure these secrets are accessible by this repository as well as any other worker repositories that will be calling the upload workflow.
+### Allow the Uploader App to Commit to Protected Branches
 
-### Allow `sfg-apt-repo-uploader` to Commit to Protected Branches
-
-As outlined in our [access and security policy](https://github.com/sfg-autonomous-systems/sfg_docs/blob/main/docs/access_and_security_policy.md), certain branches cannot be pushed to directly. To allow the GitHub App to push new packages, you must explicitly allow it to bypass this protection:
+As outlined in our [access and security policy](https://github.com/sfg-autonomous-systems/sfg_docs/blob/main/docs/access_and_security_policy.md), certain branches cannot be pushed to directly. To allow the uploader app to push new packages, you must explicitly allow it to bypass this protection:
 
 1. Navigate to this organization's **Settings** > **Repository** > **Rulesets** and click on the ruleset that was imported as part of the access and security policy.
 2. Under **Bypass list** click **Add bypass** and select the `sfg-apt-repo-uploader` app.
 3. Select **Save changes** to persist the bypass.
-
-### Install the App
-
-> [!note]
-> The GitHub App itself only needs to be installed on the repository it pushes to, not the repositories that trigger the workflow.
-
-1. Navigate back to the organization's **Settings** > **Developer settings** > **GitHub Apps** and click on **Edit** next to the `sfg-apt-repo-uploader` app.
-2. In the left sidebar, click **Install App**.
-3. Click **Install** next to the `sfg-autonomous-systems` organization.
-4. Under **Repository access** check **Only select repositories** and explicitly select `sfg_apt_repo`.
-5. Click **Install**.
-
-### Allow Other Repositories to Call the Upload Workflow
-
-1. Navigate to this repository's **Settings** > **Actions** > **General**.
-2. Under **Workflow permissions** > **Access** select **Accessible from repositories in the [...] organization**.
 
 ### Configure GPG Repository Signing
 

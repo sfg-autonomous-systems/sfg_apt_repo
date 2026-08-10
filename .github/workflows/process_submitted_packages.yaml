@@ -1,0 +1,140 @@
+name: Process Submitted Package(s)
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_name:
+        required: true
+        type: string
+      distribution:
+        required: true
+        type: string
+      ref:
+        required: true
+        type: string
+      repository:
+        required: true
+        type: string
+      run_id:
+        required: true
+        type: string
+
+concurrency:
+  cancel-in-progress: false
+  group: apt-commit-queue
+
+jobs:
+  pull_and_commit:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Generate Token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_ID }}
+          private-key: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Verify Branch Protection
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          caller_repo="${{ inputs.repository }}"
+          payload_ref="${{ inputs.ref }}"
+
+          # Check if the ref is a branch or a tag.
+          if [[ "${payload_ref}" == "refs/heads/"* ]]; then
+            branch_name="${payload_ref#refs/heads/}"
+            echo "Checking protection status for branch '${branch_name}' in '${caller_repo}'..."
+            
+            is_protected=$(gh api "repos/${caller_repo}/branches/${branch_name}" --jq '.protected')
+            
+            if [ "${is_protected}" != "true" ]; then
+              echo "Error: Branch '${branch_name}' is not a protected branch."
+              exit 1
+            fi
+
+            echo "Branch '${branch_name}' is confirmed as protected."
+          elif [[ "${payload_ref}" == "refs/tags/"* ]]; then
+            echo "Deployment triggered by tag '${payload_ref#refs/tags/}'. Proceeding."
+          else
+            echo "Error: Unsupported ref format '${payload_ref}'."
+            exit 1
+          fi
+
+      - name: Download Submitted Package(s)
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          gh run download ${{ inputs.run_id }} \
+            --repo ${{ inputs.repository }} \
+            --name ${{ inputs.artifact_name }} \
+            --dir "./submitted_packages"
+
+      - name: Verify Attestation
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          for package in "./submitted_packages/"*.deb; do
+            [ -e "${package}" ] || continue
+
+            echo "Verifying attestation for ${package}..."
+            
+            # Verify the signature and ensure it came from the correct repository.
+            json=$(gh attestation verify "${package}" --repo "${{ inputs.repository }}" --format json)
+            
+            # Extract the true Git ref from the SLSA provenance.
+            attested_ref=$(echo "${json}" | jq -r '.[0].verificationResult.statement.predicate.buildDefinition.internalParameters.github.ref')
+            
+            # Compare the cryptographically proven ref to the payload's claim.
+            if [ "${attested_ref}" != "${{ inputs.ref }}" ]; then
+              echo "Error: Payload claimed ref '${{ inputs.ref }}', but attestation proves it was built from '${attested_ref}'."
+              exit 1
+            fi
+            
+            echo "Attestation and ref verified for '$(basename "${package}")'."
+          done
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          lfs: true
+          path: sfg_apt_repo
+
+      - name: Commit Packages
+        run: |
+          distribution="${{ inputs.distribution }}"
+          mkdir -p "sfg_apt_repo/packages/${distribution}"
+
+          cd sfg_apt_repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          new_packages=0
+
+          for package in "../submitted_packages/"*.deb; do
+            [ -e "${package}" ] || continue
+
+            package_name=$(basename "${package}")
+            target_package_filepath="packages/${distribution}/${package_name}"
+            
+            if [ -f "${target_package_filepath}" ]; then
+              echo "Error: Package '${package_name}' already exists! You must increment the version in your 'DEBIAN/control' file."
+              exit 1
+            fi
+            
+            echo "Adding package '${package_name}' to distribution '${distribution}'."
+            cp "${package}" "${target_package_filepath}"
+            git add "${target_package_filepath}"
+            new_packages=$((new_packages + 1))
+          done
+
+          if [ "${new_packages}" -eq 0 ]; then
+            echo "No packages found in artifact. Exiting."
+            exit 0
+          fi
+
+          git commit -m "Add ${distribution} package(s) from ${{ inputs.repository }}" \
+                     -m "Source Run: https://github.com/${{ inputs.repository }}/actions/runs/${{ inputs.run_id }}"
+          git push

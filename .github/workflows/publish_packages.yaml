@@ -1,15 +1,15 @@
-name: Publish Packages
+name: Publish Package(s)
 
 on:
   push:
     branches: [main]
-    paths: ["packages/**"]
+    paths: [packages/**]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
   id-token: write
+  pages: write
 
 jobs:
   deploy:
