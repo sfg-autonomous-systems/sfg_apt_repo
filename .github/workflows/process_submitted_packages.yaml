@@ -9,9 +9,6 @@ on:
       distribution:
         required: true
         type: string
-      ref:
-        required: true
-        type: string
       repository:
         required: true
         type: string
@@ -35,33 +32,6 @@ jobs:
           private-key: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - name: Verify Branch Protection
-        env:
-          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
-        run: |
-          caller_repo="${{ inputs.repository }}"
-          payload_ref="${{ inputs.ref }}"
-
-          # Check if the ref is a branch or a tag.
-          if [[ "${payload_ref}" == "refs/heads/"* ]]; then
-            branch_name="${payload_ref#refs/heads/}"
-            echo "Checking protection status for branch '${branch_name}' in '${caller_repo}'..."
-            
-            is_protected=$(gh api "repos/${caller_repo}/branches/${branch_name}" --jq '.protected')
-            
-            if [ "${is_protected}" != "true" ]; then
-              echo "Error: Branch '${branch_name}' is not a protected branch."
-              exit 1
-            fi
-
-            echo "Branch '${branch_name}' is confirmed as protected."
-          elif [[ "${payload_ref}" == "refs/tags/"* ]]; then
-            echo "Deployment triggered by tag '${payload_ref#refs/tags/}'. Proceeding."
-          else
-            echo "Error: Unsupported ref format '${payload_ref}'."
-            exit 1
-          fi
-
       - name: Download Submitted Package(s)
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
@@ -71,30 +41,51 @@ jobs:
             --name ${{ inputs.artifact_name }} \
             --dir "./submitted_packages"
 
-      - name: Verify Attestation
+      - name: Verify Artifact Attestation and Origin
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
+          json=""
+          package_count=0
+
           for package in "./submitted_packages/"*.deb; do
             [ -e "${package}" ] || continue
 
             echo "Verifying attestation for ${package}..."
-            
-            # Verify the signature and ensure it came from the correct repository.
             json=$(gh attestation verify "${package}" --repo "${{ inputs.repository }}" --format json)
-            echo "${json}" | jq
+            echo "Attestation verified for '$(basename "${package}")'."
+            package_count=$((package_count + 1))
+          done
+
+          if [ "${package_count}" -eq 0 ]; then
+            echo "No packages found in artifact. Exiting."
+            exit 0
+          fi
+
+          # Extract the true Git ref from the SLSA provenance.
+          ref=$(echo "${json}" | jq -r '.[0].verificationResult.statement.predicate.buildDefinition.externalParameters.workflow.ref')
+
+          # Verify the origin of the artifact by looking at the last package's ref.
+          if [[ "${ref}" == "refs/heads/"* ]]; then
+              branch_name="${ref#refs/heads/}"
+              echo "Checking protection status for branch: ${branch_name} in ${inputs.repository}"
+              is_protected=$(gh api "repos/${inputs.repository}/branches/${branch_name}" --jq '.protected')
+              
+              if [ "${is_protected}" != "true" ]; then
+                echo "Error: Branch '${branch_name}' is not a protected branch."
+                exit 1
+              fi
+
+              echo "Branch '${branch_name}' is confirmed as protected."
             
-            # Extract the true Git ref from the SLSA provenance.
-            attested_ref=$(echo "${json}" | jq -r '.[0].verificationResult.statement.predicate.buildDefinition.externalParameters.workflow.ref')
-            
-            # Compare the cryptographically proven ref to the payload's claim.
-            if [ "${attested_ref}" != "${{ inputs.ref }}" ]; then
-              echo "Error: Payload claimed ref '${{ inputs.ref }}', but attestation proves it was built from '${attested_ref}'."
+            elif [[ "${ref}" == "refs/tags/"* ]]; then
+              echo "Deployment triggered by a tag. Proceeding."
+            else
+              echo "Error: Unsupported ref format: ${ref}"
               exit 1
             fi
-            
-            echo "Attestation and ref verified for '$(basename "${package}")'."
-          done
+
+            echo "Artifact origin verified successfully."
 
       - name: Checkout Repository
         uses: actions/checkout@v4

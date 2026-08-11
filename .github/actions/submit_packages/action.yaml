@@ -19,7 +19,7 @@ runs:
   using: "composite"
   steps:
     # Based on https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations.
-    - name: Generate Attestation
+    - name: Generate Artifact Attestation
       uses: actions/attest@v4
       with:
         subject-path: ${{ inputs.path }}
@@ -49,6 +49,5 @@ runs:
           --repo "sfg-autonomous-systems/sfg_apt_repo" \
           -f artifact_name="sfg-packages-${{ github.run_id }}" \
           -f distribution="${{ inputs.distribution }}" \
-          -f ref="${{ github.ref }}" \
           -f repository="${{ github.repository }}" \
           -f run_id="${{ github.run_id }}"
