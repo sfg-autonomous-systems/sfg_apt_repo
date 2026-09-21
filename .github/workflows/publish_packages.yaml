@@ -13,21 +13,22 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           lfs: true
 
-      - name: Install GPG and Aptly
+      - name: Install dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y gpg curl
+          # python3-yaml is required for scripts/rebuild_rosdep_rules.py
+          sudo apt-get update && sudo apt-get install -y gpg curl python3-yaml
 
           # Add the official Aptly repository to get the latest version.
           sudo mkdir -p /etc/apt/keyrings
           curl -fsSL "https://www.aptly.info/pubkey.txt" | sudo gpg --dearmor -o "/etc/apt/keyrings/aptly.gpg"
-          echo "deb [signed-by=/etc/apt/keyrings/aptly.gpg] http://repo.aptly.info/ squeeze main" | sudo tee "/etc/apt/sources.list.d/aptly.list"
+          echo "deb [signed-by=/etc/apt/keyrings/aptly.gpg] http://repo.aptly.info/release jammy main" | sudo tee "/etc/apt/sources.list.d/aptly.list"
 
           sudo apt-get update && sudo apt-get install -y aptly
 
@@ -35,12 +36,10 @@ jobs:
         run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
       - name: Create Static Files Directory
-        run: mkdir -p "github-pages"
+        run: rm -rf "github-pages" && mkdir -p "github-pages"
 
       - name: Rebuild Rosdep Rules
-        run: |
-          sudo apt-get install -y python3-yaml
-          "scripts/rebuild_rosdep_rules.py"
+        run: python3 scripts/rebuild_rosdep_rules.py
 
       - name: Rebuild Rosdep Index Package
         run: |
@@ -58,7 +57,7 @@ jobs:
 
           # Loop through every subdirectory inside the packages directory.
           for distribution_directory in "./packages/"*/; do
-            # Skip if directory is completely empty.
+            # Skip if not a directory
             [ -d "${distribution_directory}" ] || continue
             
             # Extract just the directory name.
@@ -70,7 +69,7 @@ jobs:
             aptly repo create -distribution="${distribution}" -component=main "sfg-${distribution}"
             
             # Add all packages found in that distribution's directory.
-            aptly repo add "sfg-${distribution}" "${distribution_directory}" || true
+            aptly repo add "sfg-${distribution}" "${distribution_directory}"
             
             # Append this repo name to our list.
             apt_repos="${apt_repos} sfg-${distribution}"
@@ -86,8 +85,7 @@ jobs:
           echo "GPG public key published to 'github-pages/sfg-apt-repo-public.gpg'."
 
       - name: Rebuild Directory Listings
-        run: |
-          "scripts/rebuild_directory_listings.py" "github-pages"
+        run: python3 scripts/rebuild_directory_listings.py "github-pages"
 
       - name: Publish Artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3

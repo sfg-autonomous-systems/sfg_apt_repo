@@ -16,13 +16,16 @@ on:
         required: true
         type: string
 
+# Ensure package-processing runs are serialized through one queue so they do not overlap
+# and race each other while updating the apt repository. We intentionally do not cancel
+# an in-progress run because a package commit sequence must complete without interruption.
 concurrency:
   cancel-in-progress: false
   group: apt-commit-queue
 
 jobs:
   process_submitted_packages:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Generate Token
         id: generate-token
@@ -41,51 +44,35 @@ jobs:
             --name ${{ inputs.artifact_name }} \
             --dir "./submitted_packages"
 
-      - name: Verify Artifact Attestation and Origin
+      - name: Verify Artifact Origin
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
-          json=""
-          package_count=0
+          source_ref=$(gh api "repos/${{ inputs.repository }}/actions/runs/${{ inputs.run_id }}" --jq '.head_branch // empty')
 
-          for package in "./submitted_packages/"*.deb; do
-            [ -e "${package}" ] || continue
-
-            echo "Verifying attestation for ${package}..."
-            json=$(gh attestation verify "${package}" --repo "${{ inputs.repository }}" --format json)
-            echo "Attestation verified for '$(basename "${package}")'."
-            package_count=$((package_count + 1))
-          done
-
-          if [ "${package_count}" -eq 0 ]; then
-            echo "No packages found in artifact. Exiting."
-            exit 0
+          if [ -z "${source_ref}" ]; then
+            echo "Error: Source run has no branch or tag ref."
+            exit 1
           fi
 
-          # Extract the true Git ref from the SLSA provenance.
-          ref=$(echo "${json}" | jq -r '.[0].verificationResult.statement.predicate.buildDefinition.externalParameters.workflow.ref')
+          # The Actions API returns the branch or tag name without its ref prefix.
+          if is_protected=$(gh api "repos/${{ inputs.repository }}/branches/${source_ref}" --jq '.protected' 2>/dev/null); then
+            ref="refs/heads/${source_ref}"
+            echo "Checking protection status for branch: ${source_ref} in ${{ inputs.repository }}"
 
-          # Verify the origin of the artifact by looking at the last package's ref.
-          if [[ "${ref}" == "refs/heads/"* ]]; then
-              branch_name="${ref#refs/heads/}"
-              echo "Checking protection status for branch: ${branch_name} in ${inputs.repository}"
-              is_protected=$(gh api "repos/${inputs.repository}/branches/${branch_name}" --jq '.protected')
-              
-              if [ "${is_protected}" != "true" ]; then
-                echo "Error: Branch '${branch_name}' is not a protected branch."
-                exit 1
-              fi
-
-              echo "Branch '${branch_name}' is confirmed as protected."
-            
-            elif [[ "${ref}" == "refs/tags/"* ]]; then
-              echo "Deployment triggered by a tag. Proceeding."
-            else
-              echo "Error: Unsupported ref format: ${ref}"
+            if [ "${is_protected}" != "true" ]; then
+              echo "Error: Branch '${source_ref}' is not a protected branch."
               exit 1
             fi
 
-            echo "Artifact origin verified successfully."
+            echo "Branch '${source_ref}' is confirmed as protected."
+          else
+            ref="refs/tags/${source_ref}"
+            echo "Source ref is a unsupported tag: ${ref}"
+            exit 1
+          fi
+
+          echo "Artifact origin verified successfully."
 
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -106,7 +93,7 @@ jobs:
           new_packages=0
 
           for package in "../submitted_packages/"*.deb; do
-            [ -e "${package}" ] || continue
+            [ -f "${package}" ] || continue
 
             package_name=$(basename "${package}")
             target_package_filepath="packages/${distribution}/${package_name}"
@@ -124,7 +111,7 @@ jobs:
 
           if [ "${new_packages}" -eq 0 ]; then
             echo "No packages found in artifact. Exiting."
-            exit 0
+            exit 1
           fi
 
           git commit -m "Add ${distribution} package(s) from ${{ inputs.repository }}" \

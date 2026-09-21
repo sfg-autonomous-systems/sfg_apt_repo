@@ -1,5 +1,5 @@
 name: Submit Packages
-description: Attests, uploads, and dispatches built packages to the central SFG repository.
+description: Dispatches built packages to the central SFG repository.
 
 inputs:
   dispatcher_app_id:
@@ -11,26 +11,13 @@ inputs:
   distribution:
     description: "The target Ubuntu distribution (e.g. jammy, noble)."
     required: true
-  path:
-    description: "The path to the generated packages."
+  artifact_name:
+    description: "The name of the artifact containing the built packages."
     required: true
 
 runs:
   using: "composite"
   steps:
-    # Based on https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations.
-    - name: Generate Artifact Attestation
-      uses: actions/attest@v4
-      with:
-        subject-path: ${{ inputs.path }}
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: sfg-packages-${{ github.run_id }}
-        path: ${{ inputs.path }}
-        retention-days: 1
-
     - name: Generate Token
       id: generate-token
       uses: actions/create-github-app-token@v1
@@ -47,7 +34,7 @@ runs:
       run: |
         gh workflow run process_submitted_packages.yaml \
           --repo "sfg-autonomous-systems/sfg_apt_repo" \
-          -f artifact_name="sfg-packages-${{ github.run_id }}" \
           -f distribution="${{ inputs.distribution }}" \
           -f repository="${{ github.repository }}" \
+          -f artifact_name="${{ inputs.artifact_name }}" \
           -f run_id="${{ github.run_id }}"
