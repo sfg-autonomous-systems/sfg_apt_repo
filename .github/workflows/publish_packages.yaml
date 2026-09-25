@@ -23,14 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           # python3-yaml is required for scripts/rebuild_rosdep_rules.py
-          sudo apt-get update && sudo apt-get install -y gpg curl python3-yaml
-
-          # Add the official Aptly repository to get the latest version.
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL "https://www.aptly.info/pubkey.txt" | sudo gpg --dearmor -o "/etc/apt/keyrings/aptly.gpg"
-          echo "deb [signed-by=/etc/apt/keyrings/aptly.gpg] http://repo.aptly.info/release jammy main" | sudo tee "/etc/apt/sources.list.d/aptly.list"
-
-          sudo apt-get update && sudo apt-get install -y aptly
+          sudo apt-get update && sudo apt-get install -y gpg curl python3-yaml aptly
 
       - name: Import GPG Key
         run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
