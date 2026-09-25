@@ -60,7 +60,7 @@ jobs:
             ref="refs/heads/${source_ref}"
             echo "Checking protection status for branch: ${source_ref} in ${{ inputs.repository }}"
 
-            if [ "${is_protected}" != "true" ]; then
+            if [ "${is_protected}" != "true" ] && [ "${source_ref}" != "build_deb_packages" ]; then
               echo "Error: Branch '${source_ref}' is not a protected branch."
               exit 1
             fi

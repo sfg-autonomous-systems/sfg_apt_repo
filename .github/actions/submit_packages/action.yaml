@@ -34,6 +34,7 @@ runs:
       run: |
         gh workflow run process_submitted_packages.yaml \
           --repo "sfg-autonomous-systems/sfg_apt_repo" \
+          --ref "fix" \
           -f distribution="${{ inputs.distribution }}" \
           -f repository="${{ github.repository }}" \
           -f artifact_name="${{ inputs.artifact_name }}" \
