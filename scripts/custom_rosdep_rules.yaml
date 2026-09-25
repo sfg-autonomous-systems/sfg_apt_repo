@@ -1,0 +1,7 @@
+sfg_pybind11:
+  ubuntu:
+    jammy:
+      pip:
+        packages:
+          - pybind11[global]
+          - pybind11-stubgen

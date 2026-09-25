@@ -47,6 +47,7 @@ jobs:
 
           for distribution_directory in "./packages/"*/; do
             [ -d "${distribution_directory}" ] || continue
+            echo "Copying rosdep index package to distribution directory: ${distribution_directory}"
             cp "sfg-rosdep-index.deb" "${distribution_directory}/"
           done
 
