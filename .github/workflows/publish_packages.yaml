@@ -6,6 +6,14 @@ on:
     paths: [packages/**]
   workflow_dispatch:
 
+# Ensure package-processing runs are serialized through one queue so they do not overlap
+# and race each other while updating the apt repository. We intentionally do not cancel
+# an in-progress run because a package commit sequence must complete without interruption.
+concurrency:
+  group: apt-commit-queue
+  cancel-in-progress: false
+
+# Required for publishing the generated APT repository to GitHub Pages.
 permissions:
   contents: read
   id-token: write
@@ -31,6 +39,7 @@ jobs:
       - name: Create Static Files Directory
         run: rm -rf "github-pages" && mkdir -p "github-pages"
 
+      # Discover ROS Debian packages and generate the rosdep rules and source index files.
       - name: Rebuild Rosdep Rules
         run: python3 scripts/rebuild_rosdep_rules.py
 
