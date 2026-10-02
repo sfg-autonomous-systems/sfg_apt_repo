@@ -1,26 +1,24 @@
 #!/usr/bin/env python3
-"""Generate rosdep rules and the rosdep source list for the APT repository.
+"""Generate rosdep rules and validate rosdep source list entries.
 
 The script scans packages/<ubuntu-distro>/*.deb, reads each Debian package
 name, and converts ROS package names such as ros-humble-sfg-utils into a
 rosdep key named sfg_utils under the humble distribution. The Ubuntu package
-mapping is written to github-pages/rosdep_rules_<ros-distro>.yaml. Matching
-custom_rosdep_rules_<ros-distro>.yaml files are merged into those generated
-rules before they are written.
+mapping is written to github-pages/rosdep/<ros-distro>.yaml. Matching
+rosdep rules from rosdep/<ros-distro>.yaml files are merged into those
+generated rules before they are written.
 
-The source list file installed by the sfg-rosdep-index package is regenerated
-with one entry per ROS distribution. Each entry has the form::
-
-        yaml <rules-url> <ros-distro>
-
-The final field is the distribution tag used by rosdep to select the matching
-rules source. The YAML files contain rosdep keys and their installers, for
+The YAML files contain rosdep keys and their installers, for
 example an Ubuntu APT mapping::
 
         sfg_utils:
             ubuntu:
                 noble:
                     - ros-jazzy-sfg-utils
+
+The source list file installed by the sfg-rosdep-index package. The list is
+checked to ensure that it contains an entry for each ROS distribution with
+generated rosdep rules.
 
 References:
         Rosdep sources list format:
@@ -122,17 +120,16 @@ def main() -> None:
         print(f"Adding rosdep rule for {pkg.ros_package} on {pkg.ubuntu_distro}: {pkg.apt_package}")
         rosdep_rules[pkg.ros_distro][pkg.ros_package]["ubuntu"][pkg.ubuntu_distro] = [pkg.apt_package]
 
-    # Only merge custom rules for distros with discovered Debian packages.
-    # Custom-only distros are intentionally not published for now.
+    # Only merge rules from rosdep folder for distros with discovered Debian packages.
     for ros_distro in rosdep_rules:
-        custom_rules_path = Path(__file__).parent / f"custom_rosdep_rules_{ros_distro}.yaml"
-        if custom_rules_path.exists():
+        custom_rules_path = Path(__file__).parent / f"rosdep/{ros_distro}.yaml"
+        if custom_rules_path.is_file():
             with open(custom_rules_path) as file:
                 custom_rules = yaml.safe_load(file) or {}
             merge_rules(rosdep_rules[ros_distro], custom_rules)
             print(f"Merged custom rosdep rules for {ros_distro} from {custom_rules_path}")
 
-    output_directory = Path(__file__).parent.parent / "github-pages"
+    output_directory = Path(__file__).parent.parent / "github-pages/rosdep"
     output_directory.mkdir(parents=True, exist_ok=True)
 
     rosdep_source_list_path = (
@@ -144,22 +141,23 @@ def main() -> None:
         sys.exit(1)
 
     rosdep_source_list = ""
+    with open(rosdep_source_list_path, "r") as file:
+        rosdep_source_list = "".join(file.readlines())
+
+    # Every discovered ROS distribution must have a matching rosdep entry.
+    for ros_distro in rosdep_rules.keys():
+        if ros_distro not in rosdep_source_list:
+            print(f"Error: The rosdep source list does not contain an entry for {ros_distro}.")
+            print(f"Add the following line to {rosdep_source_list_path}:")
+            print(f"yaml https://sfg-autonomous-systems.github.io/sfg_apt_repo/rosdep/{ros_distro}.yaml {ros_distro}")
+            sys.exit()
+
     for ros_distro in rosdep_rules:
-        # Generate one rosdep rules file and one source list entry per ROS distribution because
+        # Generate one rosdep rules file per ROS distribution because
         # rosdep selects the matching entry by its distribution tag.
-        with open(output_directory / f"rosdep_rules_{ros_distro}.yaml", "w") as file:
+        with open(output_directory / f"{ros_distro}.yaml", "w") as file:
             yaml.dump(rosdep_rules[ros_distro], file)
-            print(f"Generated rosdep rules for {ros_distro} at 'rosdep_rules_{ros_distro}.yaml'")
-
-        rosdep_source_list += (
-            "yaml https://sfg-autonomous-systems.github.io/sfg_apt_repo/"
-            f"rosdep_rules_{ros_distro}.yaml {ros_distro}\n"
-        )
-        print(f"Added rosdep source list entry for {ros_distro}")
-
-    with open(rosdep_source_list_path, "w") as file:
-        file.write(rosdep_source_list)
-        print(f"Generated rosdep source list at '{rosdep_source_list_path}'")
+            print(f"Generated rosdep rules for {ros_distro}")
 
 
 if __name__ == "__main__":
