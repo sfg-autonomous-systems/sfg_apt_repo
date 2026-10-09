@@ -88,12 +88,14 @@ def discover_ros_deb_packages(packages_directory: Path) -> list[RosDebPackage]:
             # rosdep keys use underscores while Debian package names use hyphens.
             ros_package = match.group(2).replace("-", "_")
 
-            rosdep_rules.append(RosDebPackage(
-                ros_package=ros_package,
-                ros_distro=ros_distro,
-                apt_package=apt_package,
-                ubuntu_distro=ubuntu_distro_directory.name
-            ))
+            rosdep_rules.append(
+                RosDebPackage(
+                    ros_package=ros_package,
+                    ros_distro=ros_distro,
+                    apt_package=apt_package,
+                    ubuntu_distro=ubuntu_distro_directory.name,
+                )
+            )
     return rosdep_rules
 
 
@@ -129,8 +131,7 @@ def main() -> None:
     output_directory.mkdir(parents=True, exist_ok=True)
 
     rosdep_source_list_path = (
-        Path(__file__).parent.parent
-        / "src/sfg-rosdep-index/etc/ros/rosdep/sources.list.d/10-sfg-rosdep-index.list"
+        Path(__file__).parent.parent / "src/sfg-rosdep-index/etc/ros/rosdep/sources.list.d/10-sfg-rosdep-index.list"
     )
     if not rosdep_source_list_path.is_file():
         print(f"Error: The file {rosdep_source_list_path} does not exist.")
@@ -141,7 +142,7 @@ def main() -> None:
         rosdep_source_list = "".join(file.readlines())
 
     # Every discovered ROS distribution must have a matching rosdep entry.
-    for ros_distro in rosdep_rules.keys():
+    for ros_distro in rosdep_rules:
         if ros_distro not in rosdep_source_list:
             print(f"Error: The rosdep source list does not contain an entry for {ros_distro}.")
             print(f"Add the following line to {rosdep_source_list_path}:")
