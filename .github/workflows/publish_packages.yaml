@@ -132,7 +132,7 @@ jobs:
           # Update package lists
           sudo apt-get update
 
-      - name: Install Rosdep Index Package
+      - name: Test Rosdep Index Package
         run: |
           sudo apt-get install -y sfg-rosdep-index
           rosdep update
