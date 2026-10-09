@@ -19,12 +19,12 @@ runs:
   using: "composite"
   steps:
     - name: Upload all deb packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: deb-packages-${{ github.run_id }}
-          path: ${{ inputs.path }}
-          if-no-files-found: error
-          retention-days: 1
+      uses: actions/upload-artifact@v4
+      with:
+        name: deb-packages-${{ github.run_id }}
+        path: ${{ inputs.path }}
+        if-no-files-found: error
+        retention-days: 1
 
     - name: Generate Token
       id: generate-token
