@@ -72,7 +72,7 @@ jobs:
             aptly repo create -distribution="${distribution}" -component=main "sfg-${distribution}"
             
             # Add all packages found in that distribution's directory.
-            aptly repo add "sfg-${distribution}" "${distribution_directory}" || true
+            aptly repo add "sfg-${distribution}" "${distribution_directory}"
             
             # Append this repo name to our list.
             apt_repos="${apt_repos} sfg-${distribution}"
@@ -80,7 +80,9 @@ jobs:
 
           if [ -n "${apt_repos}" ]; then
             echo "Publishing distributions: ${apt_repos}"
-            aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" ${apt_repos}
+            for apt_repo in ${apt_repos}; do
+              aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" ${apt_repo}
+            done
             cp -r "${HOME}/.aptly/public/." "github-pages/"
           fi
 
