@@ -42,7 +42,7 @@ To publish a package to this repository, your worker repository must build the p
 ### Prerequisites
 
 Your repository must have access to the following organization-level secrets:
-* `SFG_APT_REPO_DISPATCHER_APP_ID`
+* `SFG_APT_REPO_DISPATCHER_CLIENT_ID`
 * `SFG_APT_REPO_DISPATCHER_APP_PRIVATE_KEY`
 
 ### Example GitHub Actions Workflow
@@ -70,7 +70,7 @@ jobs:
       - name: Submit Package(s)
         uses: sfg-autonomous-systems/sfg_apt_repo/.github/actions/submit_packages@main
         with:
-          dispatcher_app_id: ${{ secrets.SFG_APT_REPO_DISPATCHER_APP_ID }}
+          dispatcher_client_id: ${{ secrets.SFG_APT_REPO_DISPATCHER_CLIENT_ID }}
           dispatcher_app_private_key: ${{ secrets.SFG_APT_REPO_DISPATCHER_APP_PRIVATE_KEY }}
           distribution: jammy
           path: ./*.deb

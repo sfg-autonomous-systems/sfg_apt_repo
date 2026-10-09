@@ -32,7 +32,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # python3-yaml is required for scripts/rebuild_rosdep_rules.py
+          # python3-yaml is required for "scripts/rebuild_rosdep_rules.py".
           sudo apt-get update && sudo apt-get install -y gpg curl python3-yaml aptly
 
       - name: Import GPG Key
@@ -51,7 +51,7 @@ jobs:
 
           for distribution_directory in "./packages/"*/; do
             [ -d "${distribution_directory}" ] || continue
-            echo "Copying rosdep index package to distribution directory: ${distribution_directory}"
+            echo "Copying rosdep index package to distribution directory: '${distribution_directory}'."
             cp "sfg-rosdep-index.deb" "${distribution_directory}/"
           done
 
@@ -62,7 +62,7 @@ jobs:
 
           # Loop through every subdirectory inside the packages directory.
           for distribution_directory in "./packages/"*/; do
-            # Skip if not a directory
+            # Skip if the directory does not exist.
             [ -d "${distribution_directory}" ] || continue
             
             # Extract just the directory name.
@@ -83,7 +83,7 @@ jobs:
           if [ -n "${apt_repos}" ]; then
             echo "Publishing distributions: ${apt_repos}"
             for apt_repo in ${apt_repos}; do
-              aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" ${apt_repo}
+              aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" "${apt_repo}"
             done
             cp -r "${HOME}/.aptly/public/." "github-pages/"
           fi
@@ -92,7 +92,7 @@ jobs:
           echo "GPG public key published to 'github-pages/sfg-apt-repo-public.gpg'."
 
       - name: Rebuild Directory Listings
-        run: python3 scripts/rebuild_directory_listings.py "github-pages"
+        run: python3 "scripts/rebuild_directory_listings.py" "github-pages"
 
       - name: Publish Artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v5
@@ -107,7 +107,7 @@ jobs:
         run: |
           # Build the JSON matrix consumed by the check_apt_repo job.
           ros_distros=$(
-            cut -d' ' -f3 src/sfg-rosdep-index/etc/ros/rosdep/sources.list.d/10-sfg-rosdep-index.list | 
+            cut -d' ' -f3 "src/sfg-rosdep-index/etc/ros/rosdep/sources.list.d/10-sfg-rosdep-index.list" | 
             jq -R -s -c 'split("\n") | map(select(length > 0))'
           )
           # Example output: {"ros_distro":["humble","kilted"]}
@@ -126,10 +126,10 @@ jobs:
     steps:
       - name: Add Repository and Key
         run: |
-          # Add the repository key and repository entry
-          curl -fsSL https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-repo-public.gpg | sudo gpg --dearmor -o /usr/share/keyrings/sfg-apt-repo-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/sfg-apt-repo-keyring.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/sfg-apt-repo.list
-          # Update package lists
+          # Add the repository key and repository entry.
+          curl -fsSL "https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-repo-public.gpg" | sudo gpg --dearmor -o "/usr/share/keyrings/sfg-apt-repo-keyring.gpg"
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/sfg-apt-repo-keyring.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo/ $(lsb_release -cs) main" | sudo tee "/etc/apt/sources.list.d/sfg-apt-repo.list"
+          # Update package lists.
           sudo apt-get update
 
       - name: Test Rosdep Index Package
@@ -137,12 +137,12 @@ jobs:
           sudo apt-get install -y sfg-rosdep-index
           rosdep update
           output=$(rosdep resolve sfg_utils)
-          echo Test rosdep resolve for sfg_utils package
-          echo "$output"
-          if [[ "$output" != *"ros-${{ matrix.ros_distro }}-sfg-utils"* ]]; then
+          echo "Test rosdep resolve for sfg_utils package."
+          echo "${output}"
+          if [[ "${output}" != *"ros-${{ matrix.ros_distro }}-sfg-utils"* ]]; then
             echo "Dependency resolution failed."
             exit 1
           fi
 
-      - name: Install sfg_utils Package
+      - name: Test APT Repository by installing Example Package
         run: sudo apt-get install -y ros-${{ matrix.ros_distro }}-sfg-utils

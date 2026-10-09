@@ -12,10 +12,8 @@ The script also validates that the rosdep source list contains entries for
 each ROS distribution with generated rosdep rules.
 
 References:
-        Rosdep sources list format:
-        https://docs.ros.org/en/independent/api/rosdep/html/sources_list.html
-        Rosdep YAML format:
-        https://docs.ros.org/en/independent/api/rosdep/html/rosdep_yaml_format.html
+    Rosdep sources list format: https://docs.ros.org/en/independent/api/rosdep/html/sources_list.html
+    Rosdep YAML format: https://docs.ros.org/en/independent/api/rosdep/html/rosdep_yaml_format.html
 """
 
 import re
@@ -65,11 +63,11 @@ def discover_ros_deb_packages(packages_directory: Path) -> list[RosDebPackage]:
     if not packages_directory.exists():
         return rosdep_rules
 
-    for ubuntu_distro_dir in packages_directory.iterdir():
-        if not ubuntu_distro_dir.is_dir():
+    for ubuntu_distro_directory in packages_directory.iterdir():
+        if not ubuntu_distro_directory.is_dir():
             continue
 
-        for package_filepath in ubuntu_distro_dir.glob("*.deb"):
+        for package_filepath in ubuntu_distro_directory.glob("*.deb"):
             # Read the package name from Debian metadata instead of relying on
             # the filename, which may include version and architecture suffixes.
             try:
@@ -79,7 +77,7 @@ def discover_ros_deb_packages(packages_directory: Path) -> list[RosDebPackage]:
                 )
                 apt_package = output.strip()
             except subprocess.CalledProcessError:
-                print(f"Error: Failed to read package name from {package_filepath}")
+                print(f"Error: Failed to read package name from {package_filepath}.")
                 sys.exit(1)
 
             match = re.match(r"^ros-([a-z]+)-(.*)$", apt_package)
@@ -94,7 +92,7 @@ def discover_ros_deb_packages(packages_directory: Path) -> list[RosDebPackage]:
                 ros_package=ros_package,
                 ros_distro=ros_distro,
                 apt_package=apt_package,
-                ubuntu_distro=ubuntu_distro_dir.name
+                ubuntu_distro=ubuntu_distro_directory.name
             ))
     return rosdep_rules
 
@@ -110,7 +108,7 @@ def main() -> None:
         if pkg.ros_package not in rosdep_rules[pkg.ros_distro]:
             rosdep_rules[pkg.ros_distro][pkg.ros_package] = {"ubuntu": {}}
 
-        print(f"Adding rosdep rule for {pkg.ros_package} on {pkg.ubuntu_distro}: {pkg.apt_package}")
+        print(f"Adding rosdep rule for {pkg.ubuntu_distro}: {pkg.ros_package} -> {pkg.apt_package}")
         rosdep_rules[pkg.ros_distro][pkg.ros_package]["ubuntu"][pkg.ubuntu_distro] = [pkg.apt_package]
 
     # Only merge rules from rosdep folder for distros with discovered Debian packages.
