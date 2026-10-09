@@ -6,6 +6,7 @@ on:
     paths: [packages/**]
   workflow_dispatch:
 
+# Required for publishing the generated APT repository to GitHub Pages.
 permissions:
   contents: read
   id-token: write
@@ -13,7 +14,7 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -35,7 +36,7 @@ jobs:
         run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
       - name: Create Static Files Directory
-        run: mkdir -p "github-pages"
+        run: rm -rf "github-pages" && mkdir -p "github-pages"
 
       - name: Rebuild Rosdep Rules
         run: |
@@ -58,7 +59,7 @@ jobs:
 
           # Loop through every subdirectory inside the packages directory.
           for distribution_directory in "./packages/"*/; do
-            # Skip if directory is completely empty.
+            # Skip if not a directory
             [ -d "${distribution_directory}" ] || continue
             
             # Extract just the directory name.
