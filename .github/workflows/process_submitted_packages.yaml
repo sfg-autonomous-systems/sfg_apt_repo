@@ -16,6 +16,9 @@ on:
         required: true
         type: string
 
+# Ensure package-processing runs are serialized through one queue so they do not overlap
+# and race each other while updating the apt repository. We intentionally do not cancel
+# an in-progress run because a package commit sequence must complete without interruption.
 concurrency:
   cancel-in-progress: false
   group: apt-commit-queue
