@@ -8,17 +8,8 @@ mapping is written to github-pages/rosdep/<ros-distro>.yaml. Matching
 rosdep rules from rosdep/<ros-distro>.yaml files are merged into those
 generated rules before they are written.
 
-The YAML files contain rosdep keys and their installers, for
-example an Ubuntu APT mapping::
-
-        sfg_utils:
-            ubuntu:
-                noble:
-                    - ros-jazzy-sfg-utils
-
-The source list file installed by the sfg-rosdep-index package. The list is
-checked to ensure that it contains an entry for each ROS distribution with
-generated rosdep rules.
+The script also validates that the rosdep source list contains entries for
+each ROS distribution with generated rosdep rules.
 
 References:
         Rosdep sources list format:
@@ -50,8 +41,8 @@ def merge_rules(target: dict[str, Any], source: dict[str, Any]) -> None:
 
     Nested dictionaries are merged recursively so existing sections are
     preserved. Matching lists are combined in their original order, and each
-    item is added only once. For other value types, the source value replaces
-    the value already present in the target.
+    item is added only once. For other value types, an error is raised if the
+    key already exists in the target.
     """
 
     for key, value in source.items():
@@ -63,6 +54,8 @@ def merge_rules(target: dict[str, Any], source: dict[str, Any]) -> None:
                 if item not in target[key]:
                     target[key].append(item)
         else:
+            if key in target:
+                raise ValueError(f"Key '{key}' already exists in target dictionary")
             target[key] = value
 
 
@@ -126,8 +119,13 @@ def main() -> None:
         if custom_rules_path.is_file():
             with open(custom_rules_path) as file:
                 custom_rules = yaml.safe_load(file) or {}
-            merge_rules(rosdep_rules[ros_distro], custom_rules)
-            print(f"Merged custom rosdep rules for {ros_distro} from {custom_rules_path}")
+            try:
+                merge_rules(rosdep_rules[ros_distro], custom_rules)
+                print(f"Merged custom rosdep rules for {ros_distro} from {custom_rules_path}")
+            except ValueError as e:
+                print(f"Error: {e}")
+                print(f"Conflict in custom rules file {custom_rules_path}")
+                sys.exit(1)
 
     output_directory = Path(__file__).parent.parent / "github-pages/rosdep"
     output_directory.mkdir(parents=True, exist_ok=True)
