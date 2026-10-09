@@ -6,6 +6,14 @@ on:
     paths: [packages/**]
   workflow_dispatch:
 
+# Ensure package-processing runs are serialized through one queue so they do not overlap
+# and race each other while updating the apt repository. We intentionally do not cancel
+# an in-progress run because a package commit sequence must complete without interruption.
+concurrency:
+  group: apt-commit-queue
+  cancel-in-progress: false
+
+# Required for publishing the generated APT repository to GitHub Pages.
 permissions:
   contents: read
   id-token: write
@@ -13,34 +21,29 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+    outputs:
+      ros_distros: ${{ steps.extract-ros-distros.outputs.ros_distros }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           lfs: true
 
-      - name: Install GPG and Aptly
+      - name: Install dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y gpg curl
-
-          # Add the official Aptly repository to get the latest version.
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL "https://www.aptly.info/pubkey.txt" | sudo gpg --dearmor -o "/etc/apt/keyrings/aptly.gpg"
-          echo "deb [signed-by=/etc/apt/keyrings/aptly.gpg] http://repo.aptly.info/ squeeze main" | sudo tee "/etc/apt/sources.list.d/aptly.list"
-
-          sudo apt-get update && sudo apt-get install -y aptly
+          # python3-yaml is required for "scripts/rebuild_rosdep_rules.py".
+          sudo apt-get update && sudo apt-get install -y gpg curl python3-yaml aptly
 
       - name: Import GPG Key
         run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
       - name: Create Static Files Directory
-        run: mkdir -p "github-pages"
+        run: rm -rf "github-pages" && mkdir -p "github-pages"
 
+      # Discover ROS Debian packages and generate the rosdep rules and source index files.
       - name: Rebuild Rosdep Rules
-        run: |
-          sudo apt-get install -y python3-yaml
-          "scripts/rebuild_rosdep_rules.py"
+        run: python3 scripts/rebuild_rosdep_rules.py
 
       - name: Rebuild Rosdep Index Package
         run: |
@@ -48,6 +51,7 @@ jobs:
 
           for distribution_directory in "./packages/"*/; do
             [ -d "${distribution_directory}" ] || continue
+            echo "Copying rosdep index package to distribution directory: '${distribution_directory}'."
             cp "sfg-rosdep-index.deb" "${distribution_directory}/"
           done
 
@@ -58,7 +62,7 @@ jobs:
 
           # Loop through every subdirectory inside the packages directory.
           for distribution_directory in "./packages/"*/; do
-            # Skip if directory is completely empty.
+            # Skip if the directory does not exist.
             [ -d "${distribution_directory}" ] || continue
             
             # Extract just the directory name.
@@ -70,7 +74,7 @@ jobs:
             aptly repo create -distribution="${distribution}" -component=main "sfg-${distribution}"
             
             # Add all packages found in that distribution's directory.
-            aptly repo add "sfg-${distribution}" "${distribution_directory}" || true
+            aptly repo add "sfg-${distribution}" "${distribution_directory}"
             
             # Append this repo name to our list.
             apt_repos="${apt_repos} sfg-${distribution}"
@@ -78,7 +82,9 @@ jobs:
 
           if [ -n "${apt_repos}" ]; then
             echo "Publishing distributions: ${apt_repos}"
-            aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" ${apt_repos}
+            for apt_repo in ${apt_repos}; do
+              aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" "${apt_repo}"
+            done
             cp -r "${HOME}/.aptly/public/." "github-pages/"
           fi
 
@@ -86,13 +92,57 @@ jobs:
           echo "GPG public key published to 'github-pages/sfg-apt-repo-public.gpg'."
 
       - name: Rebuild Directory Listings
-        run: |
-          "scripts/rebuild_directory_listings.py" "github-pages"
+        run: python3 "scripts/rebuild_directory_listings.py" "github-pages"
 
       - name: Publish Artifact for GitHub Pages
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: "github-pages"
 
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
+
+      - name: Extract ROS Distros for Testing
+        id: extract-ros-distros
+        run: |
+          # Build the JSON matrix consumed by the check_apt_repo job.
+          ros_distros=$(
+            cut -d' ' -f3 "src/sfg-rosdep-index/etc/ros/rosdep/sources.list.d/10-sfg-rosdep-index.list" | 
+            jq -R -s -c 'split("\n") | map(select(length > 0))'
+          )
+          # Example output: {"ros_distro":["humble","kilted"]}
+          echo "ros_distros={\"ros_distro\":${ros_distros}}" >> "$GITHUB_OUTPUT"
+
+  check_apt_repo:
+    runs-on: ubuntu-24.04
+    container: ros:${{ matrix.ros_distro }}-ros-base
+    needs: deploy
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.deploy.outputs.ros_distros) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Add Repository and Key
+        run: |
+          # Add the repository key and repository entry.
+          curl -fsSL "https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-repo-public.gpg" | sudo gpg --dearmor -o "/usr/share/keyrings/sfg-apt-repo-keyring.gpg"
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/sfg-apt-repo-keyring.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo/ $(lsb_release -cs) main" | sudo tee "/etc/apt/sources.list.d/sfg-apt-repo.list"
+          # Update package lists.
+          sudo apt-get update
+
+      - name: Test Rosdep Index Package
+        run: |
+          sudo apt-get install -y sfg-rosdep-index
+          rosdep update
+          output=$(rosdep resolve sfg_utils)
+          echo "Test rosdep resolve for sfg_utils package."
+          echo "${output}"
+          if [[ "${output}" != *"ros-${{ matrix.ros_distro }}-sfg-utils"* ]]; then
+            echo "Dependency resolution failed."
+            exit 1
+          fi
+
+      - name: Test APT Repository by installing Example Package
+        run: sudo apt-get install -y ros-${{ matrix.ros_distro }}-sfg-utils

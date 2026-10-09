@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 index_template = """<!DOCTYPE html>
@@ -23,6 +24,8 @@ index_template = """<!DOCTYPE html>
   <ul>
     {{ index_contents }}
   </ul>
+  <hr>
+  <i><small>Build Date: {{ build_date }}</small></i>
 </body>
 </html>"""
 
@@ -47,8 +50,9 @@ def main(base_directory: Path) -> None:
 
         with open(current_directory / "index.html", "w") as index_file:
             index_file.write(
-                index_template.replace(
-                    "{{ index_contents }}", "\n    ".join(list_items)
+                # Add a newline + 4-space indent so the generated <li> items render neatly under <ul>.
+                index_template.replace("{{ index_contents }}", "\n    ".join(list_items)).replace(
+                    "{{ build_date }}", datetime.now(timezone.utc).isoformat(timespec="seconds")
                 )
             )
 

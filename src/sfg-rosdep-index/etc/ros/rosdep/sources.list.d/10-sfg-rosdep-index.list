@@ -1,1 +1,2 @@
-yaml https://sfg-autonomous-systems.github.io/sfg_apt_repo/rosdep_rules.yaml
+yaml https://sfg-autonomous-systems.github.io/sfg_apt_repo/rosdep/humble.yaml humble
+yaml https://sfg-autonomous-systems.github.io/sfg_apt_repo/rosdep/kilted.yaml kilted

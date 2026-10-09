@@ -1,13 +1,11 @@
 name: Submit Packages
-description: Attests, uploads, and dispatches built packages to the central SFG repository.
+description: Uploads built Debian packages and requests processing by the central SFG APT repository.
 
 inputs:
-  dispatcher_app_id:
-    description: "The app ID for the dispatcher."
-    required: true
+  dispatcher_client_id:
+    description: "The GitHub App client ID used to dispatch package processing."
   dispatcher_app_private_key:
-    description: "The private key for the dispatcher."
-    required: true
+    description: "The private key for the package-dispatcher GitHub App."
   distribution:
     description: "The target Ubuntu distribution (e.g. jammy, noble)."
     required: true
@@ -18,24 +16,19 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # Based on https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations.
-    - name: Generate Artifact Attestation
-      uses: actions/attest@v4
+    - name: Upload all deb packages
+      uses: actions/upload-artifact@v7
       with:
-        subject-path: ${{ inputs.path }}
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: sfg-packages-${{ github.run_id }}
+        name: deb-packages-${{ github.run_id }}
         path: ${{ inputs.path }}
+        if-no-files-found: error
         retention-days: 1
 
     - name: Generate Token
       id: generate-token
-      uses: actions/create-github-app-token@v1
+      uses: actions/create-github-app-token@v3
       with:
-        app-id: ${{ inputs.dispatcher_app_id }}
+        client-id: ${{ inputs.dispatcher_client_id }}
         private-key: ${{ inputs.dispatcher_app_private_key }}
         owner: ${{ github.repository_owner }}
         repositories: "sfg_apt_repo"
@@ -47,7 +40,7 @@ runs:
       run: |
         gh workflow run process_submitted_packages.yaml \
           --repo "sfg-autonomous-systems/sfg_apt_repo" \
-          -f artifact_name="sfg-packages-${{ github.run_id }}" \
+          -f artifact_name="deb-packages-${{ github.run_id }}" \
           -f distribution="${{ inputs.distribution }}" \
           -f repository="${{ github.repository }}" \
           -f run_id="${{ github.run_id }}"
