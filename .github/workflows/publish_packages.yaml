@@ -90,8 +90,7 @@ jobs:
           echo "GPG public key published to 'github-pages/sfg-apt-repo-public.gpg'."
 
       - name: Rebuild Directory Listings
-        run: |
-          "scripts/rebuild_directory_listings.py" "github-pages"
+        run: python3 scripts/rebuild_directory_listings.py "github-pages"
 
       - name: Publish Artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from datetime import datetime, timezone
 import os
 import sys
 from pathlib import Path
@@ -23,6 +24,8 @@ index_template = """<!DOCTYPE html>
   <ul>
     {{ index_contents }}
   </ul>
+  <hr>
+  <i><small>Build Date: {{ build_date }}</small></i>
 </body>
 </html>"""
 
@@ -49,6 +52,8 @@ def main(base_directory: Path) -> None:
             index_file.write(
                 index_template.replace(
                     "{{ index_contents }}", "\n    ".join(list_items)
+                ).replace(
+                    "{{ build_date }}", datetime.now(timezone.utc).isoformat(timespec="seconds")
                 )
             )
 
