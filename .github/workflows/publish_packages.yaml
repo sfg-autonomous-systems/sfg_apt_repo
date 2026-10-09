@@ -22,6 +22,8 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-24.04
+    outputs:
+      ros_distros: ${{ steps.extract-ros-distros.outputs.ros_distros }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -100,10 +102,24 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
 
+      - name: Extract ROS Distros for Testing
+        id: extract-ros-distros
+        run: |
+          # Build the JSON matrix consumed by the check_apt_repo job.
+          ros_distros=$(
+            cut -d' ' -f3 src/sfg-rosdep-index/etc/ros/rosdep/sources.list.d/10-sfg-rosdep-index.list | 
+            jq -R -s -c 'split("\n") | map(select(length > 0))'
+          )
+          # Example output: {"ros_distro":["humble","kilted"]}
+          echo "ros_distros={\"ros_distro\":${ros_distros}}" >> "$GITHUB_OUTPUT"
+
   check_apt_repo:
     runs-on: ubuntu-24.04
-    container: ros:humble-ros-base
+    container: ros:${{ matrix.ros_distro }}-ros-base
     needs: deploy
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.deploy.outputs.ros_distros) }}
     defaults:
       run:
         shell: bash
@@ -123,10 +139,10 @@ jobs:
           output=$(rosdep resolve sfg_utils)
           echo Test rosdep resolve for sfg_utils package
           echo "$output"
-          if [[ "$output" != *"ros-humble-sfg-utils"* ]]; then
+          if [[ "$output" != *"ros-${{ matrix.ros_distro }}-sfg-utils"* ]]; then
             echo "Dependency resolution failed."
             exit 1
           fi
 
       - name: Install sfg_utils Package
-        run: sudo apt-get install -y ros-humble-sfg-utils
+        run: sudo apt-get install -y ros-${{ matrix.ros_distro }}-sfg-utils
