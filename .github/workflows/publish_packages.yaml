@@ -99,3 +99,31 @@ jobs:
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
+
+  check_apt_repo:
+    runs-on: ubuntu-24.04
+    container: ros:humble-ros-base
+    needs: deploy
+    steps:
+      - name: Add Repository and Key
+        run: |
+          # Add the repository key and repository entry
+          curl -fsSL https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-repo-public.gpg | sudo gpg --dearmor -o /usr/share/keyrings/sfg-apt-repo-keyring.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/sfg-apt-repo-keyring.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo/ noble main" | sudo tee /etc/apt/sources.list.d/sfg-apt-repo.list
+          # Update package lists
+          sudo apt-get update
+
+      - name: Install Rosdep Index Package
+        run: |
+          sudo apt-get install -y sfg-rosdep-index
+          rosdep update
+          output=$(rosdep resolve sfg_utils)
+          echo Test rosdep resolve for sfg_utils package
+          echo "$output"
+          if [[ "$output" != *"ros-humble-sfg-utils"* ]]; then
+            echo "Dependency resolution failed."
+            exit 1
+          fi
+
+      - name: Install sfg_utils Package
+        run: sudo apt-get install -y ros-humble-sfg-utils
