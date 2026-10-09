@@ -14,7 +14,7 @@ sudo apt update && sudo apt install -y curl gpg
 # Add the GPG signing key.
 curl -fsSL "https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-repo-public.gpg" | sudo gpg --dearmor -o "/usr/share/keyrings/sfg-apt-repo.gpg"
 # Add the APT repository.
-echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/sfg-apt-repo.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo $(lsb_release -cs) main" | sudo tee "/etc/apt/sources.list.d/sfg-apt-repo.list"
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/sfg-apt-repo.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo $(lsb_release -cs) main" | sudo tee "/etc/apt/sources.list.d/sfg-apt-repo.list"
 # Update package lists.
 sudo apt update
 ```
@@ -56,11 +56,6 @@ on:
   push:
     branches: [main]
     tags: [v*.*.*]
-
-permissions:
-  attestations: write
-  contents: read
-  id-token: write
 
 jobs:
   build:
