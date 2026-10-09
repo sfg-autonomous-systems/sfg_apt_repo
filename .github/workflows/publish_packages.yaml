@@ -112,7 +112,7 @@ jobs:
         run: |
           # Add the repository key and repository entry
           curl -fsSL https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-repo-public.gpg | sudo gpg --dearmor -o /usr/share/keyrings/sfg-apt-repo-keyring.gpg
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/sfg-apt-repo-keyring.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo/ noble main" | sudo tee /etc/apt/sources.list.d/sfg-apt-repo.list
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/sfg-apt-repo-keyring.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/sfg-apt-repo.list
           # Update package lists
           sudo apt-get update
 
