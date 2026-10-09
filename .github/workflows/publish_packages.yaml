@@ -104,6 +104,9 @@ jobs:
     runs-on: ubuntu-24.04
     container: ros:humble-ros-base
     needs: deploy
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Add Repository and Key
         run: |
