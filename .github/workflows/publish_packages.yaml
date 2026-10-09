@@ -26,7 +26,7 @@ jobs:
       ros_distros: ${{ steps.extract-ros-distros.outputs.ros_distros }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           lfs: true
 
@@ -95,12 +95,12 @@ jobs:
         run: python3 scripts/rebuild_directory_listings.py "github-pages"
 
       - name: Publish Artifact for GitHub Pages
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: "github-pages"
 
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       - name: Extract ROS Distros for Testing
         id: extract-ros-distros
