@@ -1,6 +1,6 @@
 sfg_pybind11:
   ubuntu:
-    jammy:
+    noble:
       pip:
         packages:
           - pybind11[global]
