@@ -30,7 +30,7 @@ runs:
       id: generate-token
       uses: actions/create-github-app-token@v3
       with:
-        client-id: ${{ inputs.submitter_client_id }}
+        client-id: ${{ inputs.submitter_app_client_id }}
         private-key: ${{ inputs.submitter_app_private_key }}
         owner: ${{ github.repository_owner }}
         repositories: "sfg_apt_repo"

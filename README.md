@@ -95,16 +95,17 @@ This repository relies on a two-app architecture. This ensures worker repositori
     | **Where can this GitHub App be installed?** | `Only on this account`                                   |
 
 3. Click **Create GitHub App**.
-4. Save the **CLIENT ID** and generate a **Private key** (`.pem` file).
-5. In the left sidebar, click **Install App** and install it **only** on this repository.
-6. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization secrets:
+4. Save the **Client ID**.
+5. Go to **Credentials** > **Key pairs** and generate a new key (`.pem` file).
+6. In the left sidebar, click **Install App** and install it **only** on this repository.
+7. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization secrets:
 
     | Name                                     | Value                                                        | Repository access |
     | ---------------------------------------- | ------------------------------------------------------------ | ----------------- |
-    | `SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID`   | Paste the CLIENT ID copied previously.                       | All repositories  |
+    | `SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID`   | Paste the Client ID copied previously.                       | All repositories  |
     | `SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | All repositories  |
 
-7. Delete the downloaded `.pem` file.
+8. Delete the downloaded `.pem` file.
 
 ### Set Up the Uploader App (`sfg-apt-repo-uploader`)
 
@@ -120,14 +121,17 @@ This repository relies on a two-app architecture. This ensures worker repositori
     | **Where can this GitHub App be installed?** | `Only on this account`                                                       |
 
 3. Click **Create GitHub App**.
-4. Save the **CLIENT ID** and generate a **Private key** (`.pem` file).
-5. In the left sidebar, click **Install App** and install it on all repositories.
-6. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization:
+4. Save the **Client ID**.
+5. Go to **Credentials** > **Key pairs** and generate a new key (`.pem` file).
+6. In the left sidebar, click **Install App** and install it **only** on this repository.
+7. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization:
 
     | Name                                    | Value                                                        | Repository access                       |
     | --------------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
-    | `SFG_APT_REPO_UPLOADER_APP_CLIENT_ID`   | Paste the CLIENT ID copied previously.                       | Selected repositories > this repository |
+    | `SFG_APT_REPO_UPLOADER_APP_CLIENT_ID`   | Paste the Client ID copied previously.                       | Selected repositories > this repository |
     | `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | Selected repositories > this repository |
+
+8. Delete the downloaded `.pem` file.
 
 ### Allow the Uploader App to Commit to Protected Branches
 
