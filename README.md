@@ -88,7 +88,7 @@ This repository relies on a two-app architecture. This ensures worker repositori
 
     | Setting                                     | Value                                                    |
     | ------------------------------------------- | -------------------------------------------------------- |
-    | **GitHub App name**                         | `sfg-apt-repo-submitter`                                |
+    | **GitHub App name**                         | `sfg-apt-repo-submitter`                                 |
     | **Homepage URL**                            | `https://github.com/sfg-autonomous-systems/sfg_apt_repo` |
     | **Webhook > Active**                        | Unchecked                                                |
     | **Permissions > Repository permissions**    | Set **Actions** to **Read and write**.                   |
@@ -99,8 +99,8 @@ This repository relies on a two-app architecture. This ensures worker repositori
 5. In the left sidebar, click **Install App** and install it **only** on this repository.
 6. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization secrets:
 
-    | Name                                      | Value                                                        | Repository access |
-    | ----------------------------------------- | ------------------------------------------------------------ | ----------------- |
+    | Name                                     | Value                                                        | Repository access |
+    | ---------------------------------------- | ------------------------------------------------------------ | ----------------- |
     | `SFG_APT_REPO_SUBMITTER_CLIENT_ID`       | Paste the CLIENT ID copied previously.                       | All repositories  |
     | `SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | All repositories  |
 
@@ -124,10 +124,10 @@ This repository relies on a two-app architecture. This ensures worker repositori
 5. In the left sidebar, click **Install App** and install it on all repositories.
 6. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization:
 
-    | Name                                    | Value                                                        | Repository access |
-    | --------------------------------------- | ------------------------------------------------------------ | ----------------- |
-    | `SFG_APT_REPO_UPLOADER_CLIENT_ID`       | Paste the CLIENT ID copied previously.                       | Selected repositories > this repository   |
-    | `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | Selected repositories > this repository   |
+    | Name                                    | Value                                                        | Repository access                       |
+    | --------------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
+    | `SFG_APT_REPO_UPLOADER_CLIENT_ID`       | Paste the CLIENT ID copied previously.                       | Selected repositories > this repository |
+    | `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | Selected repositories > this repository |
 
 ### Allow the Uploader App to Commit to Protected Branches
 
