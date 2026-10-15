@@ -2,10 +2,12 @@ name: Submit Packages
 description: Uploads built Debian packages and requests processing by the central SFG APT repository.
 
 inputs:
-  dispatcher_client_id:
-    description: "The GitHub App client ID used to dispatch package processing."
-  dispatcher_app_private_key:
-    description: "The private key for the package-dispatcher GitHub App."
+  submitter_client_id:
+    description: "The GitHub App client ID used to submit package requests."
+    required: true
+  submitter_app_private_key:
+    description: "The private key for the package-submitter GitHub App."
+    required: true
   distribution:
     description: "The target Ubuntu distribution (e.g. jammy, noble)."
     required: true
@@ -28,12 +30,12 @@ runs:
       id: generate-token
       uses: actions/create-github-app-token@v3
       with:
-        client-id: ${{ inputs.dispatcher_client_id }}
-        private-key: ${{ inputs.dispatcher_app_private_key }}
+        client-id: ${{ inputs.submitter_client_id }}
+        private-key: ${{ inputs.submitter_app_private_key }}
         owner: ${{ github.repository_owner }}
         repositories: "sfg_apt_repo"
 
-    - name: Dispatch Event to Process Submitted Package(s)
+    - name: Trigger Processing of Submitted Package(s)
       env:
         GH_TOKEN: ${{ steps.generate-token.outputs.token }}
       shell: bash

@@ -144,5 +144,5 @@ jobs:
             exit 1
           fi
 
-      - name: Test APT Repository by installing Example Package
+      - name: Test the APT Repository With a Sample Package Install
         run: sudo apt-get install -y ros-${{ matrix.ros_distro }}-sfg-utils
