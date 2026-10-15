@@ -31,7 +31,7 @@ jobs:
         id: generate-token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ secrets.SFG_APT_REPO_UPLOADER_CLIENT_ID }}
+          client-id: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_CLIENT_ID }}
           private-key: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 

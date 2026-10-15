@@ -43,7 +43,7 @@ To publish a package to this repository, your worker repository must build the p
 
 Your repository must have access to the following organization-level secrets:
 
-* `SFG_APT_REPO_SUBMITTER_CLIENT_ID`
+* `SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID`
 * `SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY`
 
 ### Example GitHub Actions Workflow
@@ -71,7 +71,7 @@ jobs:
       - name: Submit Package(s)
         uses: sfg-autonomous-systems/sfg_apt_repo/.github/actions/submit_packages@main
         with:
-          dispatcher_client_id: ${{ secrets.SFG_APT_REPO_SUBMITTER_CLIENT_ID }}
+          dispatcher_client_id: ${{ secrets.SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID }}
           dispatcher_app_private_key: ${{ secrets.SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY }}
           distribution: jammy
           path: ./*.deb
@@ -101,7 +101,7 @@ This repository relies on a two-app architecture. This ensures worker repositori
 
     | Name                                     | Value                                                        | Repository access |
     | ---------------------------------------- | ------------------------------------------------------------ | ----------------- |
-    | `SFG_APT_REPO_SUBMITTER_CLIENT_ID`       | Paste the CLIENT ID copied previously.                       | All repositories  |
+    | `SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID`   | Paste the CLIENT ID copied previously.                       | All repositories  |
     | `SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | All repositories  |
 
 7. Delete the downloaded `.pem` file.
@@ -126,7 +126,7 @@ This repository relies on a two-app architecture. This ensures worker repositori
 
     | Name                                    | Value                                                        | Repository access                       |
     | --------------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
-    | `SFG_APT_REPO_UPLOADER_CLIENT_ID`       | Paste the CLIENT ID copied previously.                       | Selected repositories > this repository |
+    | `SFG_APT_REPO_UPLOADER_APP_CLIENT_ID`   | Paste the CLIENT ID copied previously.                       | Selected repositories > this repository |
     | `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | Selected repositories > this repository |
 
 ### Allow the Uploader App to Commit to Protected Branches

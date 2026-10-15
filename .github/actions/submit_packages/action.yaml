@@ -2,7 +2,7 @@ name: Submit Packages
 description: Uploads built Debian packages and requests processing by the central SFG APT repository.
 
 inputs:
-  submitter_client_id:
+  submitter_app_client_id:
     description: "The GitHub App client ID used to submit package requests."
     required: true
   submitter_app_private_key:
