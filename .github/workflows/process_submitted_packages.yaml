@@ -85,15 +85,20 @@ jobs:
 
       - name: Commit Packages
         run: |
-          distribution="${{ inputs.distribution }}"
-          mkdir -p "sfg_apt_repo/packages/${distribution}"
-
           cd sfg_apt_repo
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          new_packages=0
+          # The workflow may check out the branch at the commit recorded when it was dispatched.
+          # Refresh the checkout so package changes start from the latest branch commit.
+          branch="${GITHUB_REF_NAME}"
+          git fetch origin "${branch}"
+          git switch -C "${branch}" "origin/${branch}"
 
+          distribution="${{ inputs.distribution }}"
+          mkdir -p "packages/${distribution}"
+
+          new_packages=0
           for package in "../submitted_packages/"*.deb; do
             [ -f "${package}" ] || continue
 
@@ -118,4 +123,8 @@ jobs:
 
           git commit -m "Add ${distribution} package(s) from ${{ inputs.repository }}" \
                      -m "Source Run: https://github.com/${{ inputs.repository }}/actions/runs/${{ inputs.run_id }}"
-          git push
+          # The branch may have advanced since checkout.
+          # Rebase onto any commits added after checkout before pushing the package commit.
+          git fetch origin "${branch}"
+          git rebase "origin/${branch}"
+          git push origin "HEAD:${branch}"
