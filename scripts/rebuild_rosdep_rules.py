@@ -115,7 +115,7 @@ def main() -> None:
 
     # Only merge rules from rosdep folder for distros with discovered Debian packages.
     for ros_distro in rosdep_rules:
-        custom_rules_path = Path(__file__).parent / f"rosdep/{ros_distro}.yaml"
+        custom_rules_path = Path(__file__).parent.parent / f"rosdep/{ros_distro}.yaml"
         if custom_rules_path.is_file():
             with open(custom_rules_path) as file:
                 custom_rules = yaml.safe_load(file) or {}
@@ -126,6 +126,8 @@ def main() -> None:
                 print(f"Error: {e}")
                 print(f"Conflict in custom rules file {custom_rules_path}")
                 sys.exit(1)
+        else:
+            print(f"No custom rosdep rules found for {ros_distro} in {custom_rules_path}")
 
     output_directory = Path(__file__).parent.parent / "github-pages/rosdep"
     output_directory.mkdir(parents=True, exist_ok=True)
