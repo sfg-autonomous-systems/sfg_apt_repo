@@ -1,7 +1,18 @@
-sfg_pybind11:
-  ubuntu:
-    jammy:
-      pip:
-        packages:
-          - pybind11[global]
-          - pybind11-stubgen
+# Custom rosdep rules for ROS Humble on Ubuntu Jammy.
+# These rules are merged with the generated SFG package rules and published by
+# the sfg-rosdep-index. Add a rule when an SFG dependency needs an explicit
+# apt or pip mapping that is not provided by the default rosdep sources.
+# See https://docs.ros.org/en/independent/api/rosdep/html/rosdep_yaml_format.html
+#
+# Example apt dependency:
+# sfg_example_apt:
+#   ubuntu:
+#     jammy:
+#       apt: sfg-example
+# Example pip dependency:
+# sfg_example_pip:
+#   ubuntu:
+#     jammy:
+#       pip:
+#         packages:
+#           - example-package

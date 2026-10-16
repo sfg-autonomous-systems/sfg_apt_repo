@@ -134,8 +134,9 @@ def main() -> None:
                 sys.exit(1)
         else:
             print(
-                f"No custom rosdep rules found for {ros_distro} in {custom_rules_path}"
+                f"Error: No custom rosdep rules found for {ros_distro} in {custom_rules_path}"
             )
+            sys.exit(1)
 
     output_directory = Path(__file__).parent.parent / "github-pages/rosdep"
     output_directory.mkdir(parents=True, exist_ok=True)
