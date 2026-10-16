@@ -143,13 +143,38 @@ def main() -> None:
     with open(rosdep_source_list_path, "r") as file:
         rosdep_source_list = "".join(file.readlines())
 
+    # Validate format of rosdep source list entries.
+    # Every ROS distribution in the source list must have matching generated rosdep rules.
+    source_list_distros: set[str] = set()
+    for line in rosdep_source_list.splitlines():
+        line = line.strip()
+        # Ignore empty lines or comments
+        if not line or line.startswith('#'):
+            continue
+        match = re.match(r"^yaml https://sfg-autonomous-systems\.github\.io/sfg_apt_repo/rosdep/([a-z]+)\.yaml ([a-z]+)$", line)
+        if match:
+            if match.group(1) != match.group(2):
+                print(f"Error: The rosdep source list contains an entry for {match.group(1)}, but the distribution tag ({match.group(2)}) does not match.")
+                print(f"Correct the following line in {rosdep_source_list_path}: {line}")
+                sys.exit(1)
+            ros_distro = match.group(1)
+            source_list_distros.add(ros_distro)
+            if ros_distro not in rosdep_rules:
+                print(f"Error: The rosdep source list contains an entry for {ros_distro}, but no matching rosdep rules were generated.")
+                print(f"Missing rosdep rules in {rosdep_source_list_path} for line: {line}")
+                sys.exit(1)
+        else:
+            print(f"Error: Invalid format in rosdep source list.")
+            print(f"Unrecognized line in {rosdep_source_list_path}: {line}")
+            sys.exit(1)
+
     # Every discovered ROS distribution must have a matching rosdep entry.
     for ros_distro in rosdep_rules:
-        if ros_distro not in rosdep_source_list:
+        if ros_distro not in source_list_distros:
             print(f"Error: The rosdep source list does not contain an entry for {ros_distro}.")
             print(f"Add the following line to {rosdep_source_list_path}:")
             print(f"yaml https://sfg-autonomous-systems.github.io/sfg_apt_repo/rosdep/{ros_distro}.yaml {ros_distro}")
-            sys.exit()
+            sys.exit(1)
 
     for ros_distro in rosdep_rules:
         # Generate one rosdep rules file per ROS distribution because
