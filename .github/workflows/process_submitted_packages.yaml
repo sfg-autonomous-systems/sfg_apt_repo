@@ -17,10 +17,14 @@ on:
         type: string
 
 # Ensure package-processing runs are serialized through one queue so they do not overlap
-# and race each other while updating the apt repository. We intentionally do not cancel
-# an in-progress run because a package commit sequence must complete without interruption.
+# and race each other while updating the apt repository. By default, GitHub Actions only
+# keeps one run pending per concurrency group; when another run is queued, it replaces
+# the existing pending run. That can discard a package-processing run and lose its Debian
+# package. Set queue to max so every pending run is retained. We intentionally do not
+# cancel an in-progress run because a package commit sequence must complete uninterrupted.
 concurrency:
   cancel-in-progress: false
+  queue: max
   group: apt-commit-queue
 
 jobs:

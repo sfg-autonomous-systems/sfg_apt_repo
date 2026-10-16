@@ -6,11 +6,12 @@ on:
     paths: [packages/**]
   workflow_dispatch:
 
-# Ensure package-processing runs are serialized through one queue so they do not overlap
-# and race each other while updating the apt repository. We intentionally do not cancel
-# an in-progress run because a package commit sequence must complete without interruption.
+# Ensure publishing runs do not overlap while updating the GitHub Pages APT repository.
+# This uses a separate group from package processing because publishing always rebuilds
+# the repository from the current main branch, so replacing a pending stale run is safe.
+# We intentionally do not cancel an in-progress run so a deployment can complete.
 concurrency:
-  group: apt-commit-queue
+  group: apt-publish-queue
   cancel-in-progress: false
 
 # Required for publishing the generated APT repository to GitHub Pages.
