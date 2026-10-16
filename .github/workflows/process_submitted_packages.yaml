@@ -63,6 +63,7 @@ jobs:
           if is_protected=$(gh api "repos/${{ inputs.repository }}/branches/${source_ref}" --jq '.protected' 2>/dev/null); then
             ref="refs/heads/${source_ref}"
             echo "Checking protection status for branch: ${source_ref} in ${{ inputs.repository }}"
+
             if [ "${is_protected}" != "true" ]; then
               echo "Error: Branch '${source_ref}' is not a protected branch."
               exit 1

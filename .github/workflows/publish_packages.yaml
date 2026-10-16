@@ -44,7 +44,7 @@ jobs:
 
       # Discover ROS Debian packages and generate the rosdep rules and source index files.
       - name: Rebuild Rosdep Rules
-        run: python3 scripts/rebuild_rosdep_rules.py
+        run: python3 "scripts/rebuild_rosdep_rules.py"
 
       - name: Rebuild Rosdep Index Package
         run: |
@@ -140,6 +140,7 @@ jobs:
           output=$(rosdep resolve sfg_utils)
           echo "Test rosdep resolve for sfg_utils package."
           echo "${output}"
+
           if [[ "${output}" != *"ros-${{ matrix.ros_distro }}-sfg-utils"* ]]; then
             echo "Dependency resolution failed."
             exit 1

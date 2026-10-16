@@ -128,8 +128,8 @@ def main() -> None:
                 print(
                     f"Merged custom rosdep rules for {ros_distro} from {custom_rules_path}"
                 )
-            except ValueError as e:
-                print(f"Error: {e}")
+            except ValueError as error:
+                print(f"Error: {error}")
                 print(f"Conflict in custom rules file {custom_rules_path}")
                 sys.exit(1)
         else:
@@ -158,9 +158,10 @@ def main() -> None:
     source_list_distros: set[str] = set()
     for line in rosdep_source_list.splitlines():
         line = line.strip()
-        # Ignore empty lines or comments
+        # Ignore empty lines or comments.
         if not line or line.startswith("#"):
             continue
+
         match = re.match(
             r"^yaml https://sfg-autonomous-systems\.github\.io/sfg_apt_repo/rosdep/([a-z]+)\.yaml ([a-z]+)$",
             line,
@@ -174,8 +175,10 @@ def main() -> None:
                     f"Correct the following line in {rosdep_source_list_path}: {line}"
                 )
                 sys.exit(1)
+
             ros_distro = match.group(1)
             source_list_distros.add(ros_distro)
+
             if ros_distro not in rosdep_rules:
                 print(
                     f"Error: The rosdep source list contains an entry for {ros_distro}, but no matching rosdep rules were generated."
