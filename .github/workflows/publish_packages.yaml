@@ -3,7 +3,7 @@ name: Publish Package(s)
 on:
   push:
     branches: [main]
-    paths: [packages/**]
+    paths: [packages/**, src/sfg-rosdep-index/**]
   workflow_dispatch:
 
 # Ensure publishing runs do not overlap while updating the GitHub Pages APT repository.
