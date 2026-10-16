@@ -1,0 +1,18 @@
+# Custom rosdep rules for ROS Kilted on Ubuntu Noble.
+# These rules are merged with the generated SFG package rules and published by
+# the sfg-rosdep-index. Add a rule when an SFG dependency needs an explicit
+# apt or pip mapping that is not provided by the default rosdep sources.
+# See https://docs.ros.org/en/independent/api/rosdep/html/rosdep_yaml_format.html
+#
+# Example apt dependency:
+# sfg_example_apt:
+#   ubuntu:
+#     noble:
+#       apt: sfg-example
+# Example pip dependency:
+# sfg_example_pip:
+#   ubuntu:
+#     noble:
+#       pip:
+#         packages:
+#           - example-package
