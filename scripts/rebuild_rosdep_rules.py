@@ -110,8 +110,12 @@ def main() -> None:
         if pkg.ros_package not in rosdep_rules[pkg.ros_distro]:
             rosdep_rules[pkg.ros_distro][pkg.ros_package] = {"ubuntu": {}}
 
-        print(f"Adding rosdep rule for {pkg.ubuntu_distro}: {pkg.ros_package} -> {pkg.apt_package}")
-        rosdep_rules[pkg.ros_distro][pkg.ros_package]["ubuntu"][pkg.ubuntu_distro] = [pkg.apt_package]
+        print(
+            f"Adding rosdep rule for {pkg.ubuntu_distro}: {pkg.ros_package} -> {pkg.apt_package}"
+        )
+        rosdep_rules[pkg.ros_distro][pkg.ros_package]["ubuntu"][pkg.ubuntu_distro] = [
+            pkg.apt_package
+        ]
 
     # Only merge rules from rosdep folder for distros with discovered Debian packages.
     for ros_distro in rosdep_rules:
@@ -121,19 +125,24 @@ def main() -> None:
                 custom_rules = yaml.safe_load(file) or {}
             try:
                 merge_rules(rosdep_rules[ros_distro], custom_rules)
-                print(f"Merged custom rosdep rules for {ros_distro} from {custom_rules_path}")
+                print(
+                    f"Merged custom rosdep rules for {ros_distro} from {custom_rules_path}"
+                )
             except ValueError as e:
                 print(f"Error: {e}")
                 print(f"Conflict in custom rules file {custom_rules_path}")
                 sys.exit(1)
         else:
-            print(f"No custom rosdep rules found for {ros_distro} in {custom_rules_path}")
+            print(
+                f"No custom rosdep rules found for {ros_distro} in {custom_rules_path}"
+            )
 
     output_directory = Path(__file__).parent.parent / "github-pages/rosdep"
     output_directory.mkdir(parents=True, exist_ok=True)
 
     rosdep_source_list_path = (
-        Path(__file__).parent.parent / "src/sfg-rosdep-index/etc/ros/rosdep/sources.list.d/10-sfg-rosdep-index.list"
+        Path(__file__).parent.parent
+        / "src/sfg-rosdep-index/etc/ros/rosdep/sources.list.d/10-sfg-rosdep-index.list"
     )
     if not rosdep_source_list_path.is_file():
         print(f"Error: The file {rosdep_source_list_path} does not exist.")
@@ -149,31 +158,46 @@ def main() -> None:
     for line in rosdep_source_list.splitlines():
         line = line.strip()
         # Ignore empty lines or comments
-        if not line or line.startswith('#'):
+        if not line or line.startswith("#"):
             continue
-        match = re.match(r"^yaml https://sfg-autonomous-systems\.github\.io/sfg_apt_repo/rosdep/([a-z]+)\.yaml ([a-z]+)$", line)
+        match = re.match(
+            r"^yaml https://sfg-autonomous-systems\.github\.io/sfg_apt_repo/rosdep/([a-z]+)\.yaml ([a-z]+)$",
+            line,
+        )
         if match:
             if match.group(1) != match.group(2):
-                print(f"Error: The rosdep source list contains an entry for {match.group(1)}, but the distribution tag ({match.group(2)}) does not match.")
-                print(f"Correct the following line in {rosdep_source_list_path}: {line}")
+                print(
+                    f"Error: The rosdep source list contains an entry for {match.group(1)}, but the distribution tag ({match.group(2)}) does not match."
+                )
+                print(
+                    f"Correct the following line in {rosdep_source_list_path}: {line}"
+                )
                 sys.exit(1)
             ros_distro = match.group(1)
             source_list_distros.add(ros_distro)
             if ros_distro not in rosdep_rules:
-                print(f"Error: The rosdep source list contains an entry for {ros_distro}, but no matching rosdep rules were generated.")
-                print(f"Missing rosdep rules in {rosdep_source_list_path} for line: {line}")
+                print(
+                    f"Error: The rosdep source list contains an entry for {ros_distro}, but no matching rosdep rules were generated."
+                )
+                print(
+                    f"Missing rosdep rules in {rosdep_source_list_path} for line: {line}"
+                )
                 sys.exit(1)
         else:
-            print(f"Error: Invalid format in rosdep source list.")
+            print("Error: Invalid format in rosdep source list.")
             print(f"Unrecognized line in {rosdep_source_list_path}: {line}")
             sys.exit(1)
 
     # Every discovered ROS distribution must have a matching rosdep entry.
     for ros_distro in rosdep_rules:
         if ros_distro not in source_list_distros:
-            print(f"Error: The rosdep source list does not contain an entry for {ros_distro}.")
+            print(
+                f"Error: The rosdep source list does not contain an entry for {ros_distro}."
+            )
             print(f"Add the following line to {rosdep_source_list_path}:")
-            print(f"yaml https://sfg-autonomous-systems.github.io/sfg_apt_repo/rosdep/{ros_distro}.yaml {ros_distro}")
+            print(
+                f"yaml https://sfg-autonomous-systems.github.io/sfg_apt_repo/rosdep/{ros_distro}.yaml {ros_distro}"
+            )
             sys.exit(1)
 
     for ros_distro in rosdep_rules:
