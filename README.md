@@ -56,7 +56,6 @@ name: Build and Submit Package(s)
 on:
   push:
     branches: [main]
-    tags: [v*.*.*]
 
 jobs:
   build:
@@ -71,8 +70,8 @@ jobs:
       - name: Submit Package(s)
         uses: sfg-autonomous-systems/sfg_apt_repo/.github/actions/submit_packages@main
         with:
-          dispatcher_client_id: ${{ secrets.SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID }}
-          dispatcher_app_private_key: ${{ secrets.SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY }}
+          submitter_app_client_id: ${{ secrets.SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID }}
+          submitter_app_private_key: ${{ secrets.SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY }}
           distribution: jammy
           path: ./*.deb
 ```
