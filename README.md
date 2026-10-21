@@ -46,6 +46,9 @@ Your repository must have access to the following organization-level secrets:
 * `SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID`
 * `SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY`
 
+> [!note]
+> Only repositories that actually need to publish packages should have access to these secrets. If your repository needs to publish packages, ask an organization owner to grant it access to the secrets, see [Grant a Repository Access to the Submitter Secrets](#grant-a-repository-access-to-the-submitter-secrets).
+
 ### Example GitHub Actions Workflow
 
 Add the following structure to `.github/workflows/build_and_submit_packages.yaml` inside your own repository:
@@ -84,7 +87,6 @@ This repository relies on a two-app architecture. This ensures worker repositori
 
 1. Navigate to the organization's **Settings** > **Developer settings** > **GitHub Apps**.
 2. Click **New GitHub App** and configure the following properties:
-
     | Setting                                     | Value                                                    |
     | ------------------------------------------- | -------------------------------------------------------- |
     | **GitHub App name**                         | `sfg-apt-repo-submitter`                                 |
@@ -92,25 +94,31 @@ This repository relies on a two-app architecture. This ensures worker repositori
     | **Webhook > Active**                        | Unchecked                                                |
     | **Permissions > Repository permissions**    | Set **Actions** to **Read and write**.                   |
     | **Where can this GitHub App be installed?** | `Only on this account`                                   |
-
 3. Click **Create GitHub App**.
 4. Save the **Client ID**.
 5. Go to **Credentials** > **Key pairs** and generate a new key (`.pem` file).
 6. In the left sidebar, click **Install App** and install it **only** on this repository.
 7. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization secrets:
-
-    | Name                                     | Value                                                        | Repository access |
-    | ---------------------------------------- | ------------------------------------------------------------ | ----------------- |
-    | `SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID`   | Paste the Client ID copied previously.                       | All repositories  |
-    | `SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | All repositories  |
-
+    | Name                                     | Value                                                        | Repository access                                               |
+    | ---------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
+    | `SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID`   | Paste the Client ID copied previously.                       | Selected repositories > only repositories that publish packages |
+    | `SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | Selected repositories > only repositories that publish packages |
 8. Delete the downloaded `.pem` file.
 
-### Set Up the Uploader App (`sfg-apt-repo-uploader`)
+### Grant a Repository Access to the Submitter Secrets
+
+Do this when a repository starts publishing packages, and undo it when it stops.
+
+1. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions**.
+2. Open the edit page of `SFG_APT_REPO_SUBMITTER_APP_CLIENT_ID`.
+3. Under **Repository access**, add the repository to (or remove it from) the **Selected repositories**.
+4. Click **Save changes**. You don't need to enter a new value.
+5. Repeat this for `SFG_APT_REPO_SUBMITTER_APP_PRIVATE_KEY`.
+
+### Set Up the Uploader App `sfg-apt-repo-uploader`
 
 1. Navigate to the organization's **Settings** > **Developer settings** > **GitHub Apps**.
 2. Click **New GitHub App** and configure the following properties:
-
     | Setting                                     | Value                                                                        |
     | ------------------------------------------- | ---------------------------------------------------------------------------- |
     | **GitHub App name**                         | `sfg-apt-repo-uploader`                                                      |
@@ -118,25 +126,22 @@ This repository relies on a two-app architecture. This ensures worker repositori
     | **Webhook > Active**                        | Unchecked                                                                    |
     | **Permissions > Repository permissions**    | Set **Contents** to **Read and write**.<br>Set **Actions** to **Read-only**. |
     | **Where can this GitHub App be installed?** | `Only on this account`                                                       |
-
 3. Click **Create GitHub App**.
 4. Save the **Client ID**.
 5. Go to **Credentials** > **Key pairs** and generate a new key (`.pem` file).
 6. In the left sidebar, click **Install App** and install it **only** on this repository.
-7. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization:
-
+7. Navigate to the organization's **Settings** > **Secrets and variables** > **Actions** and add the following organization secrets:
     | Name                                    | Value                                                        | Repository access                       |
     | --------------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
     | `SFG_APT_REPO_UPLOADER_APP_CLIENT_ID`   | Paste the Client ID copied previously.                       | Selected repositories > this repository |
     | `SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY` | Paste the **entire** contents of the downloaded `.pem` file. | Selected repositories > this repository |
-
 8. Delete the downloaded `.pem` file.
 
 ### Allow the Uploader App to Commit to Protected Branches
 
 As outlined in our [access and security policy](https://github.com/sfg-autonomous-systems/sfg_docs/blob/main/docs/access_and_security_policy.md), certain branches cannot be pushed to directly. To allow the uploader app to push new packages, you must explicitly allow it to bypass this protection:
 
-1. Navigate to this organization's **Settings** > **Repository** > **Rulesets** and click on the ruleset that was imported as part of the access and security policy.
+1. Navigate to this organization's **Settings** > **Repository** > **Rulesets** and click on the ruleset **PR Requirement for Core Branches** that was imported as part of the access and security policy. It only applies to `stable` repositories, so this repository's `tier` must be `stable`.
 2. Under **Bypass list** click **Add bypass** and select the `sfg-apt-repo-uploader` app.
 3. Select **Save changes** to persist the bypass.
 
@@ -148,7 +153,6 @@ As outlined in our [access and security policy](https://github.com/sfg-autonomou
 Aptly requires a passphrase-less GPG key to sign the repository automatically during the GitHub Actions deployment.
 
 1. Run the following on a secure local machine to generate a GPG key:
-
     ```bash
     cat >"key-config" <<EOF
         %echo Generating a standard key
@@ -165,11 +169,9 @@ Aptly requires a passphrase-less GPG key to sign the repository automatically du
     gpg --batch --generate-key "key-config"
     rm "key-config"
     ```
-
 2. Run `gpg --list-secret-keys --keyid-format=long` and note down the 16-character key ID.
 3. Run `gpg --armor --export-secret-keys <YOUR_KEY_ID>` and copy the GPG private key.
 4. Navigate to this repository's **Settings** > **Secrets and variables** > **Actions** and add the following secrets:
-
     | Name              | Value                    |
     | ----------------- | ------------------------ |
     | `GPG_KEY_ID`      | The 16-character key ID. |
