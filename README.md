@@ -65,10 +65,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      
+
       # 1. Build your package(s)...
       # run: ...
-      
+
       # 2. Submit the built package(s) to the SFG APT repository.
       - name: Submit Package(s)
         uses: sfg-autonomous-systems/sfg_apt_repo/.github/actions/submit_packages@main
@@ -78,6 +78,23 @@ jobs:
           distribution: jammy
           path: ./*.deb
 ```
+
+### Action Inputs
+
+| Input                       | Required | Description                                                                                                |
+| --------------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `submitter_app_client_id`   | yes      | Client ID of the submitter GitHub App.                                                                     |
+| `submitter_app_private_key` | yes      | Private key of the submitter GitHub App.                                                                   |
+| `distribution`              | yes      | Target Ubuntu distribution, e.g. `jammy` or `noble`.                                                       |
+| `path`                      | one of   | Path to the packages to upload. The action uploads them as an artifact.                                    |
+| `artifact_name`             | one of   | Name of an artifact the current run already uploaded. Skips the upload and submits that artifact directly. |
+
+> [!warning]
+> Exactly one of `path` and `artifact_name` must be set; the action fails otherwise. If your build job already uploads the packages, use `artifact_name: <name>` instead of path` to skip the re-upload.
+
+### Artifact Layout
+
+The `.deb` files must be at the **root** of the artifact, with no subdirectories, for either input. The processing workflow downloads the artifact into `./submitted_packages` and discovers packages with the non-recursive glob `"../submitted_packages/"*.deb`, so anything nested deeper is silently ignored. `upload-artifact` stores files relative to the least common ancestor of the search paths, so `path: dist/*.deb` yields a flat artifact (root = `dist`), whereas `path: dist/` would preserve the directory and break discovery.
 
 ## For Admins: Setup Instructions
 
