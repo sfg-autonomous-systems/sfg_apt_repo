@@ -81,16 +81,13 @@ jobs:
 
 ### Action Inputs
 
-| Input                       | Required | Description                                                                                                |
-| --------------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
-| `submitter_app_client_id`   | yes      | Client ID of the submitter GitHub App.                                                                     |
-| `submitter_app_private_key` | yes      | Private key of the submitter GitHub App.                                                                   |
-| `distribution`              | yes      | Target Ubuntu distribution, e.g. `jammy` or `noble`.                                                       |
-| `path`                      | one of   | Path to the packages to upload. The action uploads them as an artifact.                                    |
-| `artifact_name`             | one of   | Name of an artifact the current run already uploaded. Skips the upload and submits that artifact directly. |
-
-> [!warning]
-> Exactly one of `path` and `artifact_name` must be set; the action fails otherwise. If your build job already uploads the packages, use `artifact_name: <name>` instead of path` to skip the re-upload.
+| Input                       | Required                                 | Description                                                                                                |
+| --------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `submitter_app_client_id`   | yes                                      | Client ID of the submitter GitHub App.                                                                     |
+| `submitter_app_private_key` | yes                                      | Private key of the submitter GitHub App.                                                                   |
+| `distribution`              | yes                                      | Target Ubuntu distribution, e.g. `jammy` or `noble`.                                                       |
+| `path`                      | exactly one of `path` or `artifact_name` | Path to the packages to upload. The action uploads them as an artifact.                                    |
+| `artifact_name`             | exactly one of `path` or `artifact_name` | Name of an artifact the current run already uploaded. Skips the upload and submits that artifact directly. |
 
 ### Artifact Layout
 
