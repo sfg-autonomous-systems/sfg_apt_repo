@@ -12,15 +12,49 @@ inputs:
     description: "The target Ubuntu distribution (e.g. jammy, noble)."
     required: true
   path:
-    description: "The path to the generated packages."
-    required: true
+    description: >-
+      Path to the generated packages, which this action uploads as an artifact.
+      Mutually exclusive with `artifact_name`; exactly one of the two must be
+      set. The packages must end up at the root of the artifact, without
+      subdirectories: the processing workflow discovers them with a
+      non-recursive glob, `"../submitted_packages/"*.deb`.
+    required: false
+    default: ""
+  artifact_name:
+    description: >-
+      Name of an artifact already uploaded by the current workflow run, holding
+      the packages to submit. Use this to skip the re-upload when the build job
+      already published the packages as an artifact. Mutually exclusive with
+      `path`; exactly one of the two must be set.
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
+    - name: Validate Inputs
+      shell: bash
+      env:
+        PATH_INPUT: ${{ inputs.path }}
+        ARTIFACT_NAME_INPUT: ${{ inputs.artifact_name }}
+      run: |
+        if [ -n "${PATH_INPUT}" ] && [ -n "${ARTIFACT_NAME_INPUT}" ]; then
+          echo "Error: 'path' and 'artifact_name' are mutually exclusive; set only one."
+          exit 1
+        fi
+
+        if [ -z "${PATH_INPUT}" ] && [ -z "${ARTIFACT_NAME_INPUT}" ]; then
+          echo "Error: one of 'path' or 'artifact_name' is required."
+          exit 1
+        fi
+
     - name: Upload all deb packages
+      # Skipped when the caller points us at an artifact it already uploaded.
+      if: inputs.path != ''
       uses: actions/upload-artifact@v7
       with:
+        # The .deb files must land at the artifact root, with no
+        # subdirectories; see "Artifact Layout" in the README.
         name: deb-packages-${{ github.run_id }}
         path: ${{ inputs.path }}
         if-no-files-found: error
@@ -38,11 +72,18 @@ runs:
     - name: Trigger Processing of Submitted Package(s)
       env:
         GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        ARTIFACT_NAME_INPUT: ${{ inputs.artifact_name }}
       shell: bash
       run: |
+        # Either forward the caller's artifact name, or the one we just uploaded ourselves.
+        artifact_name="${ARTIFACT_NAME_INPUT}"
+        if [ -z "${artifact_name}" ]; then
+          artifact_name="deb-packages-${{ github.run_id }}"
+        fi
+
         gh workflow run process_submitted_packages.yaml \
           --repo "sfg-autonomous-systems/sfg_apt_repo" \
-          -f artifact_name="deb-packages-${{ github.run_id }}" \
+          -f artifact_name="${artifact_name}" \
           -f distribution="${{ inputs.distribution }}" \
           -f repository="${{ github.repository }}" \
           -f run_id="${{ github.run_id }}"
