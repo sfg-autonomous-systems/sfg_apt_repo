@@ -97,7 +97,9 @@ jobs:
           if [ -n "${apt_repos}" ]; then
             echo "Publishing distributions: ${apt_repos}"
             for apt_repo in ${apt_repos}; do
-              aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" "${apt_repo}"
+              # Explicitly publish amd64 and arm64 hardware architectures.
+              # Architecture independent packages are included in both indexes.
+              aptly publish repo -batch -architectures="amd64,arm64" -gpg-key="${{ secrets.GPG_KEY_ID }}" "${apt_repo}"
             done
             cp -r "${HOME}/.aptly/public/." "github-pages/"
           fi
