@@ -153,9 +153,9 @@ Do this when a repository starts publishing packages, and undo it when it stops.
 
 ### Allow the Uploader App to Commit to Protected Branches
 
-As outlined in our [access and security policy](https://github.com/sfg-autonomous-systems/sfg_admin/blob/main/docs/access_and_security_policy.md), certain branches cannot be pushed to directly. To allow the uploader app to push new packages, you must explicitly allow it to bypass this protection:
+As outlined in our [access and security policy](https://github.com/sfg-autonomous-systems/sfg_admin/blob/main/docs/access_and_security_policy.md), certain branches cannot be pushed to directly. To allow the uploader app to push new packages, you must explicitly allow it to bypass this protection. Repeat the following steps for the rulesets **PR Requirement for Core Branches** and **PR Approval Requirement for Core Branches**:
 
-1. Navigate to this organization's **Settings** > **Repository** > **Rulesets** and click on the ruleset **PR Requirement for Core Branches** that was imported as part of the access and security policy. It only applies to `stable` repositories, so this repository's `tier` must be `stable`.
+1. Navigate to this organization's **Settings** > **Repository** > **Rulesets** and click on the ruleset.
 2. Under **Bypass list** click **Add bypass** and select the `sfg-apt-repo-uploader` app.
 3. Select **Save changes** to persist the bypass.
 
