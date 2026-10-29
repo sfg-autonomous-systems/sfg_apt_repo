@@ -101,6 +101,7 @@ def discover_ros_deb_packages(packages_directory: Path) -> list[RosDebPackage]:
 
 def main() -> None:
     packages_directory = Path(__file__).parent.parent / "packages"
+    custom_rules_directory = Path(__file__).parent.parent / "rosdep"
     rosdep_rules: dict[str, Any] = {}
 
     for pkg in discover_ros_deb_packages(packages_directory):
@@ -119,7 +120,7 @@ def main() -> None:
 
     # Only merge rules from rosdep folder for distros with discovered Debian packages.
     for ros_distro in rosdep_rules:
-        custom_rules_path = Path(__file__).parent.parent / f"rosdep/{ros_distro}.yaml"
+        custom_rules_path = custom_rules_directory / f"{ros_distro}.yaml"
         if custom_rules_path.is_file():
             with open(custom_rules_path) as file:
                 custom_rules = yaml.safe_load(file) or {}
@@ -179,14 +180,23 @@ def main() -> None:
             ros_distro = match.group(1)
             source_list_distros.add(ros_distro)
 
+            custom_rules_path = custom_rules_directory / f"{ros_distro}.yaml"
+            if not custom_rules_path.is_file():
+                print(
+                    f"Error: The rosdep source list contains an entry for {ros_distro}, but no matching custom rosdep rule file was found."
+                )
+                print(
+                    f"Missing custom rosdep rules file: {custom_rules_path}"
+                )
+                sys.exit(1)
+
             if ros_distro not in rosdep_rules:
                 print(
-                    f"Error: The rosdep source list contains an entry for {ros_distro}, but no matching rosdep rules were generated."
+                    f"Warning: The rosdep source list contains an entry for {ros_distro}, but no matching rosdep rules were generated."
                 )
                 print(
                     f"Missing rosdep rules in {rosdep_source_list_path} for line: {line}"
                 )
-                sys.exit(1)
         else:
             print("Error: Invalid format in rosdep source list.")
             print(f"Unrecognized line in {rosdep_source_list_path}: {line}")
