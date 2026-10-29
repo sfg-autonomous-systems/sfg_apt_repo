@@ -151,12 +151,14 @@ def main() -> None:
         sys.exit(1)
 
     rosdep_source_list = ""
+
     with open(rosdep_source_list_path, "r") as file:
         rosdep_source_list = "".join(file.readlines())
 
     # Validate format of rosdep source list entries.
     # Every ROS distribution in the source list must have matching generated rosdep rules.
     source_list_distros: set[str] = set()
+
     for line in rosdep_source_list.splitlines():
         line = line.strip()
         # Ignore empty lines or comments.
@@ -179,8 +181,8 @@ def main() -> None:
 
             ros_distro = match.group(1)
             source_list_distros.add(ros_distro)
-
             custom_rules_path = custom_rules_directory / f"{ros_distro}.yaml"
+    
             if not custom_rules_path.is_file():
                 print(
                     f"Error: The rosdep source list contains an entry for {ros_distro}, but no matching custom rosdep rule file was found."
