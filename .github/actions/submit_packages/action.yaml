@@ -83,6 +83,7 @@ runs:
 
         gh workflow run process_submitted_packages.yaml \
           --repo "sfg-autonomous-systems/sfg_apt_repo" \
+          --ref "improve-apt-repo-publishing" \
           -f artifact_name="${artifact_name}" \
           -f distribution="${{ inputs.distribution }}" \
           -f repository="${{ github.repository }}" \
