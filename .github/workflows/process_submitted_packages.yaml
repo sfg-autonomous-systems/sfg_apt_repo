@@ -122,6 +122,28 @@ jobs:
             exit 1
           fi
 
+          package_temp_name="sfg-rosdep-index.deb"
+          dpkg-deb --build "src/sfg-rosdep-index" "${package_temp_name}"
+
+          package_name=$(dpkg-deb -f "${package_temp_name}" Package)
+          package_version=$(dpkg-deb -f "${package_temp_name}" Version)
+          package_architecture=$(dpkg-deb -f "${package_temp_name}" Architecture)
+          package_filename="${package_name}_${package_version}_${package_architecture}.deb"
+          mv "${package_temp_name}" "${package_filename}"
+
+          for distribution_directory in "packages/"*/; do
+            [ -d "${distribution_directory}" ] || continue
+            target_package_filepath="${distribution_directory}${package_filename}"
+            if [ -f "${target_package_filepath}" ]; then
+              echo "Package '${package_filename}' already exists in '${distribution_directory}', keeping it."
+              continue
+            fi
+
+            echo "Adding rosdep index package '${package_filename}' to '${distribution_directory}'."
+            cp "${package_filename}" "${target_package_filepath}"
+            git add "${target_package_filepath}"
+          done
+
           git commit -m "Add ${distribution} package(s) from ${{ inputs.repository }}" \
                      -m "Source Run: https://github.com/${{ inputs.repository }}/actions/runs/${{ inputs.run_id }}"
           # The branch may have advanced since checkout.
