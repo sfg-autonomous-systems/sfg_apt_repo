@@ -212,11 +212,15 @@ def main() -> None:
             )
             sys.exit(1)
 
-    for ros_distro in rosdep_rules:
+    # If no ROS Debian packages were found, create an empty YAML file for every
+    # distro in the source list so each configured rosdep URL remains valid.
+    distros_to_generate = rosdep_rules if rosdep_rules else source_list_distros
+
+    for ros_distro in distros_to_generate:
         # Generate one rosdep rules file per ROS distribution because
         # rosdep selects the matching entry by its distribution tag.
         with open(output_directory / f"{ros_distro}.yaml", "w") as file:
-            yaml.dump(rosdep_rules[ros_distro], file)
+            yaml.dump(rosdep_rules.get(ros_distro, {}), file)
             print(f"Generated rosdep rules for {ros_distro}")
 
 
