@@ -2,7 +2,7 @@ name: Build Rosdep Index Package
 
 on:
   push:
-    branches: [main]
+    branches: [main, test-improve-apt-repo-publishing]
     paths: [packages/**, src/sfg-rosdep-index/**]
   pull_request:
     paths: [packages/**, src/sfg-rosdep-index/**]
@@ -34,7 +34,7 @@ jobs:
           cd sfg_apt_repo
 
           # Refresh main so package commits start from the latest branch commit.
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          if [ "${{ github.event_name }}" = "push" ]; then
             branch="${GITHUB_REF_NAME}"
             git fetch origin "${branch}"
             git switch -C "${branch}" "origin/${branch}"
@@ -113,7 +113,7 @@ jobs:
           dpkg-deb --build "src/sfg-rosdep-index" "${{ steps.detect.outputs.package_filename }}"
 
       - name: Commit Index Package
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.detect.outputs.needs_package == 'true'
+        if: steps.detect.outputs.needs_package == 'true'
         run: |
           cd sfg_apt_repo
           git config user.name "github-actions[bot]"
