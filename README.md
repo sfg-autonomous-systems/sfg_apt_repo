@@ -1,8 +1,12 @@
 # SFG APT Repo
 
+![Ubuntu](https://img.shields.io/badge/Ubuntu-jammy%20%7C%20noble-E95420?logo=ubuntu&logoColor=white)
+
 This repository hosts the official APT packages for SFG Autonomous Systems. The packages contained in this repository are generated via GitHub Actions and hosted via GitHub Pages.
 
 ## For Users: Adding This Repository to Your System
+
+Follow below steps to install SFG packages on your Ubuntu machine.
 
 ### Add the APT Repository
 
@@ -14,7 +18,7 @@ sudo apt update && sudo apt install -y curl gpg
 # Add the GPG signing key.
 curl -fsSL "https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-repo-public.gpg" | sudo gpg --dearmor -o "/usr/share/keyrings/sfg-apt-repo.gpg"
 # Add the APT repository.
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/sfg-apt-repo.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo $(lsb_release -cs) main" | sudo tee "/etc/apt/sources.list.d/sfg-apt-repo.list"
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/sfg-apt-repo.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo $(. /etc/os-release && echo "$VERSION_CODENAME") main" | sudo tee "/etc/apt/sources.list.d/sfg-apt-repo.list"
 # Update package lists.
 sudo apt update
 ```
