@@ -40,7 +40,7 @@ jobs:
             git switch -C "${branch}" "origin/${branch}"
           fi
 
-          # A new distribution needs the current index package before publishing.
+          # A new Ubuntu distribution needs the current index package before publishing.
           missing_index_package=false
           for distribution_directory in "packages/"*/; do
             [ -d "${distribution_directory}" ] || continue
@@ -66,56 +66,50 @@ jobs:
             diff_head="${{ github.sha }}"
           fi
 
-          index_source_changed=true
-          if git diff --quiet "${diff_base}" "${diff_head}" -- "src/sfg-rosdep-index"; then
-            index_source_changed=false
-          fi
+          # Read the package metadata from the control file to derive the standard package filename.
+          control_filepath="src/sfg-rosdep-index/DEBIAN/control"
+          control_field() {
+            sed -n "s/^${1}:[[:space:]]*//p" "${control_filepath}" | head -n 1 | tr -d '[:space:]'
+          }
 
-          needs_package=false
-          if [ "${index_source_changed}" = true ] || [ "${missing_index_package}" = true ]; then
-            needs_package=true
-          fi
-
-          echo "index_source_changed=${index_source_changed}" >> "$GITHUB_OUTPUT"
-          echo "needs_package=${needs_package}" >> "$GITHUB_OUTPUT"
-
-          if [ "${needs_package}" = false ]; then
-            echo "No index source changes and every distribution has an sfg-rosdep-index package. Nothing to do."
-          fi
-
-      - name: Build and Validate Index Package
-        id: build
-        if: steps.detect.outputs.needs_package == 'true'
-        run: |
-          cd sfg_apt_repo
-          # Build the Debian package once, it is copied to missing distributions later.
-          package_temp_name="sfg-rosdep-index.deb"
-          dpkg-deb --build "src/sfg-rosdep-index" "${package_temp_name}"
-
-          # Read Debian metadata so the archive gets its standard package filename.
-          package_name=$(dpkg-deb -f "${package_temp_name}" Package)
-          package_version=$(dpkg-deb -f "${package_temp_name}" Version)
-          package_architecture=$(dpkg-deb -f "${package_temp_name}" Architecture)
-          package_filename="${package_name}_${package_version}_${package_architecture}.deb"
-          mv "${package_temp_name}" "${package_filename}"
-
-          # A changed source requires a package version that is not already stored in 'packages'.
-          existing_package_filepath=""
-          if [ -d packages ]; then
-            existing_package_filepath=$(find packages -type f -name "$package_filename" -print -quit)
-          fi
-          if [ "${{ steps.detect.outputs.index_source_changed }}" = true ] && [ -n "${existing_package_filepath}" ]; then
-            echo "Error: Changes were detected in src/sfg-rosdep-index, but package '${package_filename}' already exists at '${existing_package_filepath}'. Increment the package version before rebuilding."
+          package_name=$(control_field Package)
+          package_version=$(control_field Version)
+          package_architecture=$(control_field Architecture)
+          if [ -z "${package_name}" ] || [ -z "${package_version}" ] || [ -z "${package_architecture}" ]; then
+            echo "Error: '${control_filepath}' must define Package, Version and Architecture."
             exit 1
           fi
+          package_filename="${package_name}_${package_version}_${package_architecture}.deb"
 
-          if [ "${{ steps.detect.outputs.index_source_changed }}" = false ] && [ -n "${existing_package_filepath}" ] && ! cmp -s "${package_filename}" "${existing_package_filepath}"; then
-            # Reuse the committed bytes so all distributions receive an identical archive.
-            echo "Rebuilt package '${package_filename}' differs from existing '${existing_package_filepath}'; using the existing package bytes."
-            cp "${existing_package_filepath}" "${package_filename}"
+          existing_package_filepath=""
+          if [ -d packages ]; then
+            existing_package_filepath=$(find packages -type f -name "${package_filename}" -print -quit)
           fi
 
-          echo "package_filename=${package_filename}" >> "$GITHUB_OUTPUT"
+          # A version that is not yet stored in 'packages' is a new release.
+          new_package_version=false
+          if [ -z "${existing_package_filepath}" ]; then
+            new_package_version=true
+          elif ! git diff --quiet "${diff_base}" "${diff_head}" -- "src/sfg-rosdep-index"; then
+            # Source changes without a version bump are treated as unreleased work in progress.
+            echo "Warning: 'src/sfg-rosdep-index' changed, but version '${package_version}' already exists at '${existing_package_filepath}'. Bump the version to release the changes."
+          fi
+
+          if [ "${new_package_version}" != true ] && [ "${missing_index_package}" != true ]; then
+            echo "No new package version and every distribution has an sfg-rosdep-index package. Nothing to do."
+            exit 0
+          fi
+
+          echo "needs_package=true" >>"$GITHUB_OUTPUT"
+          echo "new_package_version=${new_package_version}" >>"$GITHUB_OUTPUT"
+          echo "package_filename=${package_filename}" >>"$GITHUB_OUTPUT"
+          echo "existing_package_filepath=${existing_package_filepath}" >>"$GITHUB_OUTPUT"
+
+      - name: Build Index Package
+        if: steps.detect.outputs.new_package_version == 'true'
+        run: |
+          cd sfg_apt_repo
+          dpkg-deb --build "src/sfg-rosdep-index" "${{ steps.detect.outputs.package_filename }}"
 
       - name: Commit Index Package
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.detect.outputs.needs_package == 'true'
@@ -124,20 +118,24 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          package_filename="${{ steps.build.outputs.package_filename }}"
-          # After a source change, add the package to every distribution.
-          # Otherwise, add it only to distributions where it is missing.
+          package_filename="${{ steps.detect.outputs.package_filename }}"
+          # Copy from the fresh build for a new version, otherwise from the committed package.
+          package_source_filepath="${{ steps.detect.outputs.existing_package_filepath }}"
+          if [ -z "${package_source_filepath}" ]; then
+            package_source_filepath="${package_filename}"
+          fi
+
+          # A new version goes to every distribution, an existing one only where it is missing.
           for distribution_directory in "packages/"*/; do
             [ -d "${distribution_directory}" ] || continue
             target_package_filepath="${distribution_directory}${package_filename}"
 
-            # Preserve existing files, only add the package to distributions where it is missing.
-            if [ "${{ steps.detect.outputs.index_source_changed }}" = false ] && [ -f "${target_package_filepath}" ]; then
+            if [ "${{ steps.detect.outputs.new_package_version }}" = false ] && [ -f "${target_package_filepath}" ]; then
               continue
             fi
 
             echo "Adding rosdep index package '${package_filename}' to '${distribution_directory}'."
-            cp "${package_filename}" "${target_package_filepath}"
+            cp "${package_source_filepath}" "${target_package_filepath}"
             git add "${target_package_filepath}"
           done
 
