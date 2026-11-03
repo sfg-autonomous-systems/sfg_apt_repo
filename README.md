@@ -4,7 +4,7 @@ This repository hosts the official APT packages for SFG Autonomous Systems. The 
 
 ## For Users: Adding This Repository to Your System
 
-Supported Ubuntu releases: **22.04 LTS (jammy)** and **24.04 LTS (noble)**.
+![Ubuntu](https://img.shields.io/badge/Ubuntu-jammy%20%7C%20noble-E95420?logo=ubuntu&logoColor=white)
 
 ### Add the APT Repository
 
