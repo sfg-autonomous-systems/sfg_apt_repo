@@ -90,6 +90,7 @@ jobs:
           new_package_version=false
           if [ -z "${existing_package_filepath}" ]; then
             new_package_version=true
+            echo "New sfg-rosdep-index package version '${package_version}' detected."
           elif ! git diff --quiet "${diff_base}" "${diff_head}" -- "src/sfg-rosdep-index"; then
             # Source changes without a version bump are treated as unreleased work in progress.
             echo "Warning: 'src/sfg-rosdep-index' changed, but version '${package_version}' already exists at '${existing_package_filepath}'. Bump the version to release the changes."

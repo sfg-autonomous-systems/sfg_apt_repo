@@ -94,9 +94,11 @@ jobs:
           path: "github-pages"
 
       - name: Deploy to GitHub Pages
+        if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main')
         uses: actions/deploy-pages@v5
 
       - name: Extract ROS Distros for Testing
+        if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main')
         id: extract-ros-distros
         run: |
           # Build the JSON matrix consumed by the check_apt_repo job.
@@ -108,6 +110,7 @@ jobs:
           echo "ros_distros={\"ros_distro\":${ros_distros}}" >> "$GITHUB_OUTPUT"
 
   check_apt_repo:
+    if: needs.deploy.outputs.ros_distros != ''
     runs-on: ubuntu-24.04
     container: ros:${{ matrix.ros_distro }}-ros-base
     needs: deploy
