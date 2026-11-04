@@ -1,9 +1,9 @@
 name: Publish Package(s)
 
 on:
-  push:
-    branches: [main]
-    paths: [packages/**, src/sfg-rosdep-index/**]
+  workflow_run:
+    workflows: [Build Rosdep Index Package]
+    types: [completed]
   workflow_dispatch:
 
 # Ensure publishing runs do not overlap while updating the GitHub Pages APT repository.
@@ -22,6 +22,7 @@ permissions:
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-24.04
     outputs:
       ros_distros: ${{ steps.extract-ros-distros.outputs.ros_distros }}
@@ -31,7 +32,7 @@ jobs:
         with:
           lfs: true
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           # python3-yaml is required for "scripts/rebuild_rosdep_rules.py".
           sudo apt-get update && sudo apt-get install -y gpg curl python3-yaml aptly
@@ -45,16 +46,6 @@ jobs:
       # Discover ROS Debian packages and generate the rosdep rules and source index files.
       - name: Rebuild Rosdep Rules
         run: python3 "scripts/rebuild_rosdep_rules.py"
-
-      - name: Rebuild Rosdep Index Package
-        run: |
-          dpkg-deb --build "src/sfg-rosdep-index" "sfg-rosdep-index.deb"
-
-          for distribution_directory in "./packages/"*/; do
-            [ -d "${distribution_directory}" ] || continue
-            echo "Copying rosdep index package to distribution directory: '${distribution_directory}'."
-            cp "sfg-rosdep-index.deb" "${distribution_directory}/"
-          done
 
       - name: Rebuild APT Repository
         run: |
@@ -84,8 +75,11 @@ jobs:
           if [ -n "${apt_repos}" ]; then
             echo "Publishing distributions: ${apt_repos}"
             for apt_repo in ${apt_repos}; do
-              aptly publish repo -batch -gpg-key="${{ secrets.GPG_KEY_ID }}" "${apt_repo}"
+              # Explicitly publish amd64 and arm64 hardware architectures.
+              # Architecture independent packages are included in both indexes.
+              aptly publish repo -batch -architectures="amd64,arm64" -gpg-key="${{ secrets.GPG_KEY_ID }}" "${apt_repo}"
             done
+
             cp -r "${HOME}/.aptly/public/." "github-pages/"
           fi
 
@@ -101,9 +95,11 @@ jobs:
           path: "github-pages"
 
       - name: Deploy to GitHub Pages
+        if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main')
         uses: actions/deploy-pages@v5
 
       - name: Extract ROS Distros for Testing
+        if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main')
         id: extract-ros-distros
         run: |
           # Build the JSON matrix consumed by the check_apt_repo job.
@@ -115,6 +111,7 @@ jobs:
           echo "ros_distros={\"ros_distro\":${ros_distros}}" >> "$GITHUB_OUTPUT"
 
   check_apt_repo:
+    if: needs.deploy.outputs.ros_distros != ''
     runs-on: ubuntu-24.04
     container: ros:${{ matrix.ros_distro }}-ros-base
     needs: deploy

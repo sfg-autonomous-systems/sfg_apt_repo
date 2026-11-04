@@ -1,0 +1,153 @@
+name: Build Rosdep Index Package
+
+on:
+  push:
+    branches: [main]
+    paths: [packages/**, src/sfg-rosdep-index/**]
+  pull_request:
+    paths: [packages/**, src/sfg-rosdep-index/**]
+
+# Serialize package commits with submitted-package processing so both workflows
+# cannot update the main branch at the same time.
+concurrency:
+  cancel-in-progress: false
+  queue: max
+  group: apt-commit-queue
+
+permissions:
+  contents: write
+
+jobs:
+  build_rosdep_index_package:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          lfs: true
+          fetch-depth: 0
+          path: sfg_apt_repo
+
+      - name: Detect Index Package Requirements
+        id: detect
+        run: |
+          cd sfg_apt_repo
+
+          # Refresh main so package commits start from the latest branch commit.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            branch="${GITHUB_REF_NAME}"
+            git fetch origin "${branch}"
+            git switch -C "${branch}" "origin/${branch}"
+          fi
+
+          # A new Ubuntu distribution needs the current index package before publishing.
+          missing_index_package=false
+          for distribution_directory in "packages/"*/; do
+            [ -d "${distribution_directory}" ] || continue
+            index_package_found=false
+            for existing_package_filepath in "${distribution_directory}"sfg-rosdep-index_*.deb; do
+              if [ -f "${existing_package_filepath}" ]; then
+                index_package_found=true
+                break
+              fi
+            done
+
+            if [ "${index_package_found}" = false ]; then
+              missing_index_package=true
+              echo "Distribution '${distribution_directory}' has no sfg-rosdep-index package."
+            fi
+          done
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            diff_base="${{ github.event.pull_request.base.sha }}"
+            diff_head="${{ github.event.pull_request.head.sha }}"
+          else
+            diff_base="${{ github.event.before }}"
+            diff_head="${{ github.sha }}"
+          fi
+
+          # Read the package metadata from the control file to derive the standard package filename.
+          control_filepath="src/sfg-rosdep-index/DEBIAN/control"
+          control_field() {
+            sed -n "s/^${1}:[[:space:]]*//p" "${control_filepath}" | head -n 1 | tr -d '[:space:]'
+          }
+
+          package_name=$(control_field Package)
+          package_version=$(control_field Version)
+          package_architecture=$(control_field Architecture)
+          if [ -z "${package_name}" ] || [ -z "${package_version}" ] || [ -z "${package_architecture}" ]; then
+            echo "Error: '${control_filepath}' must define Package, Version and Architecture."
+            exit 1
+          fi
+          package_filename="${package_name}_${package_version}_${package_architecture}.deb"
+
+          existing_package_filepath=""
+          if [ -d packages ]; then
+            existing_package_filepath=$(find packages -type f -name "${package_filename}" -print -quit)
+          fi
+
+          # A version that is not yet stored in 'packages' is a new release.
+          new_package_version=false
+          if [ -z "${existing_package_filepath}" ]; then
+            new_package_version=true
+            echo "New sfg-rosdep-index package version '${package_version}' detected."
+          elif ! git diff --quiet "${diff_base}" "${diff_head}" -- "src/sfg-rosdep-index"; then
+            # Source changes without a version bump are treated as unreleased work in progress.
+            echo "Warning: 'src/sfg-rosdep-index' changed, but version '${package_version}' already exists at '${existing_package_filepath}'. Bump the version to release the changes."
+          fi
+
+          if [ "${new_package_version}" != true ] && [ "${missing_index_package}" != true ]; then
+            echo "No new package version and every distribution has an sfg-rosdep-index package. Nothing to do."
+            exit 0
+          fi
+
+          echo "needs_package=true" >>"$GITHUB_OUTPUT"
+          echo "new_package_version=${new_package_version}" >>"$GITHUB_OUTPUT"
+          echo "package_filename=${package_filename}" >>"$GITHUB_OUTPUT"
+          echo "existing_package_filepath=${existing_package_filepath}" >>"$GITHUB_OUTPUT"
+
+      - name: Build Index Package
+        if: steps.detect.outputs.new_package_version == 'true'
+        run: |
+          cd sfg_apt_repo
+          dpkg-deb --build "src/sfg-rosdep-index" "${{ steps.detect.outputs.package_filename }}"
+
+      - name: Commit Index Package
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.detect.outputs.needs_package == 'true'
+        run: |
+          cd sfg_apt_repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          package_filename="${{ steps.detect.outputs.package_filename }}"
+          # Copy from the fresh build for a new version, otherwise from the committed package.
+          package_source_filepath="${{ steps.detect.outputs.existing_package_filepath }}"
+          if [ -z "${package_source_filepath}" ]; then
+            package_source_filepath="${package_filename}"
+          fi
+
+          # A new version goes to every distribution, an existing one only where it is missing.
+          for distribution_directory in "packages/"*/; do
+            [ -d "${distribution_directory}" ] || continue
+            target_package_filepath="${distribution_directory}${package_filename}"
+
+            if [ "${{ steps.detect.outputs.new_package_version }}" = false ] && [ -f "${target_package_filepath}" ]; then
+              continue
+            fi
+
+            echo "Adding rosdep index package '${package_filename}' to '${distribution_directory}'."
+            cp "${package_source_filepath}" "${target_package_filepath}"
+            git add "${target_package_filepath}"
+          done
+
+          if git diff --cached --quiet; then
+            echo "No rosdep index package changes to commit."
+            exit 0
+          fi
+
+          branch="${GITHUB_REF_NAME}"
+          git commit -m "Update sfg-rosdep-index packages"
+          # The branch may have advanced since checkout.
+          git fetch origin "${branch}"
+          git rebase "origin/${branch}"
+          git push origin "HEAD:${branch}"
