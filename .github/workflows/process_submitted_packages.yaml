@@ -1,4 +1,5 @@
 name: Process Submitted Package(s)
+run-name: Process Submitted Package(s) from ${{ inputs.repository }}
 
 on:
   workflow_dispatch:
@@ -15,7 +16,6 @@ on:
       run_id:
         required: true
         type: string
-
 # Ensure package-processing runs are serialized through one queue so they do not overlap
 # and race each other while updating the apt repository. By default, GitHub Actions only
 # keeps one run pending per concurrency group; when another run is queued, it replaces
