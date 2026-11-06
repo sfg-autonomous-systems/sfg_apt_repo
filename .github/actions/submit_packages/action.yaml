@@ -70,6 +70,7 @@ runs:
         repositories: "sfg_apt_repo"
 
     - name: Trigger Processing of Submitted Package(s)
+      id: trigger-processing
       env:
         GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         ARTIFACT_NAME_INPUT: ${{ inputs.artifact_name }}
@@ -81,9 +82,29 @@ runs:
           artifact_name="deb-packages-${{ github.run_id }}"
         fi
 
-        gh workflow run process_submitted_packages.yaml \
+        dispatch_output=$(gh workflow run process_submitted_packages.yaml \
           --repo "sfg-autonomous-systems/sfg_apt_repo" \
           -f artifact_name="${artifact_name}" \
           -f distribution="${{ inputs.distribution }}" \
           -f repository="${{ github.repository }}" \
-          -f run_id="${{ github.run_id }}"
+          -f run_id="${{ github.run_id }}")
+
+        workflow_id="${dispatch_output##*/}"
+        if [[ ! "${workflow_id}" =~ ^[0-9]+$ ]]; then
+          echo "Error: Could not determine the dispatched workflow ID."
+          exit 1
+        fi
+
+        echo "Dispatched package-processing workflow: ${workflow_id}"
+        echo "workflow_id=${workflow_id}" >>"${GITHUB_OUTPUT}"
+
+    - name: Wait for Package Processing
+      env:
+        GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        WORKFLOW_ID: ${{ steps.trigger-processing.outputs.workflow_id }}
+      shell: bash
+      run: |
+        gh run watch "${WORKFLOW_ID}" \
+          --repo "sfg-autonomous-systems/sfg_apt_repo" \
+          --exit-status \
+          --interval 10
