@@ -1,7 +1,5 @@
 # SFG APT Repo
 
-![Ubuntu](https://img.shields.io/badge/Ubuntu-jammy%20%7C%20noble-E95420?logo=ubuntu&logoColor=white)
-
 This repository hosts the official APT packages for SFG Autonomous Systems. The packages contained in this repository are generated via GitHub Actions and hosted via GitHub Pages.
 
 ## For Users: Adding This Repository to Your System
