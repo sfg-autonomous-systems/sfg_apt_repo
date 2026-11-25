@@ -41,40 +41,6 @@ Once completed, you can use `rosdep install` in your workspaces as usual, and it
 
 To publish a package to this repository, your worker repository must build the package, and then call this repository's GitHub Action to securely submit it.
 
-### Package Storage
-
-Packages are not stored in git. They are stored as assets of these GitHub releases:
-
-| Release             | Contents                                                         | Published into         |
-| ------------------- | ---------------------------------------------------------------- | ---------------------- |
-| `common`            | Packages that are installable on every distribution, stored once | every distribution     |
-| `jammy`, `noble`, … | Packages built for one Ubuntu distribution                       | that distribution only |
-
-The [Publish Package(s)](.github/workflows/publish_packages.yaml) workflow downloads all releases and rebuilds the APT repository on GitHub Pages from them. A new distribution only needs its first submitted package; it then also gets every package of the `common` release.
-
-Every upload is checked before anything is uploaded, see [scripts/package_storage.py](scripts/package_storage.py):
-
-* A package version can only be uploaded once. Submitting identical content again, e.g. by re-running the processing workflow, is skipped. A rebuilt package is never identical, so different content under an existing version fails; increment the `Version` instead.
-* A package must be stored either in `common` or in distribution releases, never both.
-* Only assets uploaded by the `sfg-apt-repo-uploader` app are trusted. An asset uploaded by anyone else, e.g. by hand, blocks uploads of the same package and makes the publish workflow fail until it is deleted.
-* GitHub replaces `~` and `:` in asset names with `.`. Each asset's label therefore holds the exact filename `<Package>_<Version>_<Architecture>.deb`. Two versions that only differ in these characters, e.g. `1.0.0~jammy1` and `1.0.0.jammy1`, can't both be stored.
-
-Runs on branches other than `main` use separate releases with the `test-` prefix, e.g. `test-jammy`, and never touch the production releases.
-
-### Internal Packages
-
-Internal packages are owned by this repository, such as `sfg-rosdep-index`. They are defined in `src/<package>/` as a raw `dpkg-deb` tree with a `DEBIAN/control` file. The [Build Internal Packages](.github/workflows/build_internal_packages.yaml) workflow runs [scripts/build_internal_packages.py](scripts/build_internal_packages.py) and uploads every package version that is missing from its release. To release a change, bump `Version` in the package's `DEBIAN/control` file.
-
-Each package is built once and stored in the `common` release, so it is published into every distribution.
-
-The scripts are tested with `python3 -m unittest discover -s tests` (requires `dpkg-deb`, e.g. on Ubuntu).
-
-[tests/e2e_release_storage.py](tests/e2e_release_storage.py) is a manual end-to-end test against real GitHub releases of a separate test repository, e.g. `sfg-autonomous-systems/release-asset-name-test`. It is not run by CI. Each run uses its own tag prefix `e2e-<timestamp>-` and leaves its releases in place:
-
-```bash
-GH_TOKEN="$(gh auth token)" python3 tests/e2e_release_storage.py --repository sfg-autonomous-systems/release-asset-name-test
-```
-
 ### Prerequisites
 
 Your repository must have access to the following organization-level secrets:
@@ -98,9 +64,9 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 1. Build your package(s)...
       # run: ...
@@ -128,6 +94,32 @@ jobs:
 ### Artifact Layout
 
 The `.deb` files must be at the **root** of the artifact, with no subdirectories, for either input. The processing workflow downloads the artifact into `./submitted_packages` and discovers packages with the non-recursive glob `"submitted_packages/"*.deb`, so anything nested deeper is silently ignored. `upload-artifact` stores files relative to the least common ancestor of the search paths, so `path: dist/*.deb` yields a flat artifact (root = `dist`), whereas `path: dist/` would preserve the directory and break discovery.
+
+### Package Storage
+
+Packages are not stored in git. They are stored as assets of these GitHub releases:
+
+| Release             | Contents                                                         | Published into         |
+| ------------------- | ---------------------------------------------------------------- | ---------------------- |
+| `common`            | Packages that are installable on every distribution, stored once | every distribution     |
+| `jammy`, `noble`, … | Packages built for one Ubuntu distribution                       | that distribution only |
+
+The [Publish Package(s)](.github/workflows/publish_packages.yaml) workflow downloads all releases and rebuilds the APT repository on GitHub Pages from them. A new distribution only needs its first submitted package. It then also gets every package of the `common` release.
+
+Every upload is checked before anything is uploaded, see [scripts/package_storage.py](scripts/package_storage.py):
+
+* A package version can only be uploaded once. Submitting identical content again, e.g. by re-running the processing workflow, is skipped. A rebuilt package is never identical, so different content under an existing version fails, increment the `Version` instead.
+* A package must be stored either in `common` or in distribution releases, never both.
+* Only assets uploaded by the `sfg-apt-repo-uploader` app are trusted. An asset uploaded by anyone else, e.g. by hand, blocks uploads of the same package and makes the publish workflow fail until it is deleted.
+* GitHub replaces `~` and `:` in asset names with `.`. Each asset's label therefore holds the exact filename `<Package>_<Version>_<Architecture>.deb`. Two versions that only differ in these characters, e.g. `1.0.0~jammy1` and `1.0.0.jammy1`, can't both be stored.
+
+Runs on branches other than `main` use separate releases with the `test-` prefix, e.g. `test-jammy`, and never touch the production releases.
+
+### Internal Packages
+
+Internal packages are owned by this repository, such as `sfg-rosdep-index`. They are defined in `src/<package>/` as a raw `dpkg-deb` tree with a `DEBIAN/control` file. The [Build Internal Packages](.github/workflows/build_internal_packages.yaml) workflow runs [scripts/build_internal_packages.py](scripts/build_internal_packages.py) and uploads every package version that is missing from its release. To release a change, bump `Version` in the package's `DEBIAN/control` file.
+
+Each package is built once and stored in the `common` release, so it is published into every distribution.
 
 ## For Admins: Setup Instructions
 
@@ -191,7 +183,7 @@ Do this when a repository starts publishing packages, and undo it when it stops.
 
 The releases are the only copy of the packages. Deleting a release deletes every package in it, and unlike git there is no history to recover from. The uploader app never pushes to branches, so it needs no bypass for the branch rulesets.
 
-GitHub has no per-release permissions: everyone with write access to this repository can upload and delete release assets. The scripts therefore only publish assets uploaded by the uploader app. Keep write access to this repository limited to the people who maintain it; developers submit packages through the action and only need read access.
+GitHub has no per-release permissions: everyone with write access to this repository can upload and delete release assets. The scripts therefore only publish assets uploaded by the uploader app. Keep write access to this repository limited to the people who maintain it. Developers submit packages through the action and only need read access.
 
 1. Navigate to this repository's **Settings** > **Rules** > **Rulesets** and click **New ruleset** > **New tag ruleset**.
 2. Set **Ruleset name** to `Package Releases` and **Enforcement status** to **Active**.
@@ -232,3 +224,17 @@ Aptly requires a passphrase-less GPG key to sign the repository automatically du
     | ----------------- | ------------------------ |
     | `GPG_KEY_ID`      | The 16-character key ID. |
     | `GPG_PRIVATE_KEY` | The GPG private key.     |
+
+## For Maintainers: Changing the Package Workflows
+
+This section is only relevant when changing the workflows or scripts of this repository.
+
+### Tests
+
+The scripts in [scripts/](scripts/) are tested with `python3 -m unittest discover -s tests` (requires `dpkg-deb`, e.g. on Ubuntu). The [Test Scripts](.github/workflows/test_scripts.yaml) workflow runs them for pull requests and pushes to `main` that change `scripts/` or `tests/`.
+
+[tests/e2e_release_storage.py](tests/e2e_release_storage.py) is a manual end-to-end test against real GitHub releases of a separate test repository, e.g. `sfg-autonomous-systems/release-asset-name-test`. It is not run by CI. Each run uses its own tag prefix `e2e-<timestamp>-` and leaves its releases in place:
+
+```bash
+GH_TOKEN="$(gh auth token)" python3 tests/e2e_release_storage.py --repository sfg-autonomous-systems/release-asset-name-test
+```
