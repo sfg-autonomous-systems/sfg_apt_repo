@@ -1,0 +1,51 @@
+name: Build Internal Packages
+
+on:
+  push:
+    branches: [main]
+    paths: [src/**, scripts/build_internal_packages.py, scripts/package_storage.py, scripts/debian_package.py]
+  pull_request:
+    paths: [src/**, scripts/build_internal_packages.py, scripts/package_storage.py, scripts/debian_package.py]
+
+# Serialize package uploads with submitted-package processing so both workflows
+# cannot check and update the package releases at the same time.
+concurrency:
+  cancel-in-progress: false
+  queue: max
+  group: apt-commit-queue
+
+permissions:
+  contents: read
+
+jobs:
+  build_internal_packages:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Generate Token
+        id: generate-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SFG_APT_REPO_UPLOADER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Builds every src/<package> that is missing from its release into build/<release name>/.
+      # Only pushes upload the built packages. Pull requests compare against the releases of their
+      # target branch.
+      - name: Build and Upload Internal Packages
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          BRANCH: ${{ github.base_ref || github.ref_name }}
+          DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          DIFF_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          arguments=(--branch "${BRANCH}" --diff-base "${DIFF_BASE}" --diff-head "${DIFF_HEAD}")
+          if [ "${{ github.event_name }}" = "push" ]; then
+            arguments+=(--upload)
+          fi
+          python3 "scripts/build_internal_packages.py" "${arguments[@]}"

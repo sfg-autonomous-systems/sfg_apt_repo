@@ -17,11 +17,11 @@ on:
         required: true
         type: string
 # Ensure package-processing runs are serialized through one queue so they do not overlap
-# and race each other while updating the apt repository. By default, GitHub Actions only
+# and race each other while checking and updating the package releases. By default, GitHub Actions only
 # keeps one run pending per concurrency group; when another run is queued, it replaces
 # the existing pending run. That can discard a package-processing run and lose its Debian
 # package. Set queue to max so every pending run is retained. We intentionally do not
-# cancel an in-progress run because a package commit sequence must complete uninterrupted.
+# cancel an in-progress run because a package upload must complete uninterrupted.
 concurrency:
   cancel-in-progress: false
   queue: max
@@ -77,55 +77,26 @@ jobs:
 
           echo "Artifact origin verified successfully."
 
-      - name: Checkout Repository
+      # Only the scripts are needed; packages are stored in the releases, not in git.
+      - name: Checkout Scripts
         uses: actions/checkout@v7
         with:
-          token: ${{ steps.generate-token.outputs.token }}
-          lfs: true
+          sparse-checkout: scripts
           path: sfg_apt_repo
 
-      - name: Commit Packages
+      # 'all' stores the packages once in the common release, which is published into every distribution.
+      - name: Upload Packages to Release
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          DISTRIBUTION: ${{ inputs.distribution }}
         run: |
-          cd sfg_apt_repo
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # The workflow may check out the branch at the commit recorded when it was dispatched.
-          # Refresh the checkout so package changes start from the latest branch commit.
-          branch="${GITHUB_REF_NAME}"
-          git fetch origin "${branch}"
-          git switch -C "${branch}" "origin/${branch}"
-
-          distribution="${{ inputs.distribution }}"
-          mkdir -p "packages/${distribution}"
-
-          new_packages=0
-          for package in "../submitted_packages/"*.deb; do
-            [ -f "${package}" ] || continue
-
-            package_name=$(basename "${package}")
-            target_package_filepath="packages/${distribution}/${package_name}"
-            
-            if [ -f "${target_package_filepath}" ]; then
-              echo "Error: Package '${package_name}' already exists! You must increment the version in your 'DEBIAN/control' file."
-              exit 1
-            fi
-            
-            echo "Adding package '${package_name}' to distribution '${distribution}'."
-            cp "${package}" "${target_package_filepath}"
-            git add "${target_package_filepath}"
-            new_packages=$((new_packages + 1))
-          done
-
-          if [ "${new_packages}" -eq 0 ]; then
-            echo "No packages found in artifact. Exiting."
+          shopt -s nullglob
+          packages=("submitted_packages/"*.deb)
+          if [ "${#packages[@]}" -eq 0 ]; then
+            echo "Error: No packages found in artifact."
             exit 1
           fi
 
-          git commit -m "Add ${distribution} package(s) from ${{ inputs.repository }}" \
-                     -m "Source Run: https://github.com/${{ inputs.repository }}/actions/runs/${{ inputs.run_id }}"
-          # The branch may have advanced since checkout.
-          # Rebase onto any commits added after checkout before pushing the package commit.
-          git fetch origin "${branch}"
-          git rebase "origin/${branch}"
-          git push origin "HEAD:${branch}"
+          # The dispatched branch selects the releases: "main" uses the production releases.
+          python3 "sfg_apt_repo/scripts/release_assets.py" --branch "${GITHUB_REF_NAME}" \
+            upload "${DISTRIBUTION}" "${packages[@]}"

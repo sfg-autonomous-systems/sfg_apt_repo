@@ -1,0 +1,5 @@
+# Packages are stored in GitHub releases, not in git. These directories are created by the scripts.
+packages/
+build/
+github-pages/
+__pycache__/

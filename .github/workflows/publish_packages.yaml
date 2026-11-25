@@ -2,13 +2,13 @@ name: Publish Package(s)
 
 on:
   workflow_run:
-    workflows: [Build Rosdep Index Package]
+    workflows: [Build Internal Packages, Process Submitted Package(s)]
     types: [completed]
   workflow_dispatch:
 
 # Ensure publishing runs do not overlap while updating the GitHub Pages APT repository.
 # This uses a separate group from package processing because publishing always rebuilds
-# the repository from the current main branch, so replacing a pending stale run is safe.
+# the repository from the current package releases, so replacing a pending stale run is safe.
 # We intentionally do not cancel an in-progress run so a deployment can complete.
 concurrency:
   group: apt-publish-queue
@@ -29,8 +29,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
-        with:
-          lfs: true
 
       - name: Install Dependencies
         run: |
@@ -42,6 +40,14 @@ jobs:
 
       - name: Create Static Files Directory
         run: rm -rf "github-pages" && mkdir -p "github-pages"
+
+      # Recreate packages/<distribution>/ from the releases. Common packages are added to every distribution.
+      # The branch selects the releases: "main" uses the production releases, others the test ones.
+      - name: Download Packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+        run: python3 "scripts/release_assets.py" --branch "${BRANCH}" download "packages"
 
       # Discover ROS Debian packages and generate the rosdep rules and source index files.
       - name: Rebuild Rosdep Rules
