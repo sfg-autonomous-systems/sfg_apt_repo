@@ -2,7 +2,7 @@ name: Build Internal Packages
 
 on:
   push:
-    branches: [main, test-release-package-storage]
+    branches: [main, test-sfg-apt-source]
     paths: [src/**, scripts/build_internal_packages.py, scripts/package_storage.py, scripts/debian_package.py]
   pull_request:
     paths: [src/**, scripts/build_internal_packages.py, scripts/package_storage.py, scripts/debian_package.py]
