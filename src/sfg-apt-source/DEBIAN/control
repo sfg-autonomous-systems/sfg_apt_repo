@@ -1,0 +1,11 @@
+Package: sfg-apt-source
+Version: 1.0.0
+Architecture: all
+Maintainer: SFG Autonomous Systems <projekt-sfg-autonomous-systems@hs-esslingen.de>
+Section: admin
+Priority: optional
+Depends: ca-certificates
+Description: APT source and signing key for the SFG Autonomous Systems repository.
+ Installs the repository signing keyring and a deb822 APT source for the SFG
+ APT repository. Depends on ca-certificates, because the repository is served
+ over HTTPS.

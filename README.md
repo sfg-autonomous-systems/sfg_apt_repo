@@ -8,15 +8,31 @@ Follow below steps to install SFG packages on your Ubuntu machine.
 
 ### Add the APT Repository
 
-To install software from this repository, you need to add our public GPG key and configure APT to pull from our GitHub Pages site:
+The `sfg-apt-source` package configures the repository for you: it installs our GPG signing key and the APT source for your Ubuntu release. Download and install it, then update your package lists:
 
 ```bash
-# Install prerequisites.
-sudo apt update && sudo apt install -y curl gpg
+curl -fsSLo /tmp/sfg-apt-source.deb "https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-source_$(. /etc/os-release && echo "$UBUNTU_CODENAME").deb"
+sudo apt install -y /tmp/sfg-apt-source.deb && sudo apt update
+```
+
+`sfg-apt-source` is updated through the repository itself, so future changes such as a new signing key reach you with a regular `sudo apt upgrade`.
+
+### Manual Setup
+
+If you can't use `sfg-apt-source`, you can add the repository by hand. Unlike the package, this setup isn't updated automatically, so you need to repeat it when the signing key changes. Use it as well if you mirror the repository or manage APT sources yourself.
+
+```bash
 # Add the GPG signing key.
-curl -fsSL "https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-repo-public.gpg" | sudo gpg --dearmor -o "/usr/share/keyrings/sfg-apt-repo.gpg"
+sudo install -d -m 0755 /etc/apt/keyrings
+sudo curl -fsSLo /etc/apt/keyrings/sfg-apt-repo.asc "https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-repo-public.asc"
 # Add the APT repository.
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/sfg-apt-repo.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo $(. /etc/os-release && echo "$VERSION_CODENAME") main" | sudo tee "/etc/apt/sources.list.d/sfg-apt-repo.list"
+sudo tee /etc/apt/sources.list.d/sfg-apt-repo.sources >/dev/null <<EOF
+Types: deb
+URIs: https://sfg-autonomous-systems.github.io/sfg_apt_repo
+Suites: $(. /etc/os-release && echo "$UBUNTU_CODENAME")
+Components: main
+Signed-By: /etc/apt/keyrings/sfg-apt-repo.asc
+EOF
 # Update package lists.
 sudo apt update
 ```
@@ -117,9 +133,9 @@ Runs on branches other than `main` use separate releases with the `test-` prefix
 
 ### Internal Packages
 
-Internal packages are owned by this repository, such as `sfg-rosdep-index`. They are defined in `src/<package>/` as a raw `dpkg-deb` tree with a `DEBIAN/control` file. The [Build Internal Packages](.github/workflows/build_internal_packages.yaml) workflow runs [scripts/build_internal_packages.py](scripts/build_internal_packages.py) and uploads every package version that is missing from its release. To release a change, bump `Version` in the package's `DEBIAN/control` file.
+Internal packages are owned by this repository, such as `sfg-apt-source` and `sfg-rosdep-index`. They are defined in `src/<package>/` as a raw `dpkg-deb` tree with a `DEBIAN/control` file. The [Build Internal Packages](.github/workflows/build_internal_packages.yaml) workflow runs [scripts/build_internal_packages.py](scripts/build_internal_packages.py) and uploads every package version that is missing from its release. To release a change, bump `Version` in the package's `DEBIAN/control` file.
 
-Each package is built once and stored in the `common` release, so it is published into every distribution.
+Files can contain the placeholder `@DISTRIBUTION@`, which is replaced with the Ubuntu codename (e.g. `jammy`). A package that uses it is built once per distribution with the version suffix `~<distribution>`, e.g. `sfg-apt-source_1.0.0~jammy_all.deb`, and stored in that distribution's release. A package without it is built once and stored in the `common` release. A new distribution gets its packages when its first package is submitted: [Process Submitted Package(s)](.github/workflows/process_submitted_packages.yaml) builds and uploads every missing internal package after each upload. To rebuild missing packages by hand, run the Build Internal Packages workflow. The publish workflow also serves the latest `sfg-apt-source` package of each distribution at the stable URL `sfg-apt-source_<distribution>.deb`.
 
 ## For Admins: Setup Instructions
 
@@ -224,6 +240,27 @@ Aptly requires a passphrase-less GPG key to sign the repository automatically du
     | ----------------- | ------------------------ |
     | `GPG_KEY_ID`      | The 16-character key ID. |
     | `GPG_PRIVATE_KEY` | The GPG private key.     |
+5. Add the public key to the keyring shipped by `sfg-apt-source`, then bump the `Version` in [src/sfg-apt-source/DEBIAN/control](src/sfg-apt-source/DEBIAN/control):
+    ```bash
+    gpg --export <YOUR_KEY_ID> >"src/sfg-apt-source/usr/share/keyrings/sfg-apt-repo.gpg"
+    ```
+    The publish workflow fails if the signing key from `GPG_KEY_ID` isn't in the keyring of the newest `sfg-apt-source` package of every distribution.
+
+### Rotate the GPG Signing Key
+
+Clients only trust the keys in the keyring shipped by `sfg-apt-source`, so a new key must reach them before it signs the repository. The publish workflow fails if the signing key isn't in the keyring of the newest published `sfg-apt-source` package.
+
+1. Generate a new key as described in [Configure GPG Repository Signing](#configure-gpg-repository-signing), steps 1 and 2.
+2. Ship the old and the new public key. The old public key is taken from the committed keyring:
+    ```bash
+    gpg --import "src/sfg-apt-source/usr/share/keyrings/sfg-apt-repo.gpg"
+    gpg --export <OLD_KEY_ID> <NEW_KEY_ID> >"src/sfg-apt-source/usr/share/keyrings/sfg-apt-repo.gpg"
+    ```
+3. Bump the `Version` in [src/sfg-apt-source/DEBIAN/control](src/sfg-apt-source/DEBIAN/control) and merge. Clients receive the new keyring with `apt upgrade`.
+4. Give users time to upgrade, then replace the `GPG_KEY_ID` and `GPG_PRIVATE_KEY` secrets (steps 3 and 4 above) and run the [Publish Package(s)](.github/workflows/publish_packages.yaml) workflow. Users of the [Manual Setup](#manual-setup) must download the key again.
+5. Later, remove the old key from the keyring in another version bump.
+
+A client that missed the rotation fails on `apt update` with `NO_PUBKEY` and has to install the bootstrap package again, see [Add the APT Repository](#add-the-apt-repository). If the old key was compromised, ship only the new key in step 2 and switch the secrets right after step 3.
 
 ## For Maintainers: Changing the Package Workflows
 
