@@ -78,6 +78,7 @@ def build_packages(
         # The content is unknown before building, so any asset with this label counts as existing.
         check = release.check_package(filename, None)
         if check.exists:
+            print(f"Skipping '{filename}': it already exists in '{release.tag}'.")
             if source_changed(source_directory, diff_base, diff_head):
                 print(
                     f"Warning: '{source_directory.relative_to(REPOSITORY_DIRECTORY)}' changed, but "
