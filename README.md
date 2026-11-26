@@ -233,8 +233,12 @@ This section is only relevant when changing the workflows or scripts of this rep
 
 The scripts in [scripts/](scripts/) are tested with `python3 -m unittest discover -s tests` (requires `dpkg-deb`, e.g. on Ubuntu). The [Test Scripts](.github/workflows/test_scripts.yaml) workflow runs them for pull requests and pushes to `main` that change `scripts/` or `tests/`.
 
-[tests/e2e_release_storage.py](tests/e2e_release_storage.py) is a manual end-to-end test against real GitHub releases of a separate test repository, e.g. `sfg-autonomous-systems/release-asset-name-test`. It is not run by CI. Each run uses its own tag prefix `e2e-<timestamp>-` and leaves its releases in place:
+[tests/e2e_release_storage.py](tests/e2e_release_storage.py) is a manual end-to-end test against real GitHub releases. It is not run by CI and refuses to run against this repository. To run it:
 
-```bash
-GH_TOKEN="$(gh auth token)" python3 tests/e2e_release_storage.py --repository sfg-autonomous-systems/release-asset-name-test
-```
+1. Create a temporary private repository, e.g. `sfg-autonomous-systems/release-asset-name-test`. It needs no content; the test creates its own releases.
+2. Run the test with a token that can write releases of that repository. It requires `dpkg-deb` and the GitHub CLI, e.g. on Ubuntu:
+    ```bash
+    GH_TOKEN="$(gh auth token)" python3 tests/e2e_release_storage.py --repository sfg-autonomous-systems/release-asset-name-test
+    ```
+    Each run uses its own tag prefix `e2e-<timestamp>-` and leaves its releases in place for inspection.
+3. Delete the repository when it is no longer needed.

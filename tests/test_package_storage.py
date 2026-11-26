@@ -1,6 +1,6 @@
 """Tests for scripts/package_storage.py with an in-memory fake of the GitHub releases.
 
-The fake behaves like GitHub as verified in sfg-autonomous-systems/release-asset-name-test:
+The fake behaves like GitHub as verified by tests/e2e_release_storage.py:
 asset names are sanitized ("~" and ":" become "."), labels are kept as given, every asset has a
 SHA-256 digest, and uploading an existing asset name fails.
 

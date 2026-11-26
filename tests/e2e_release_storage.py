@@ -8,6 +8,8 @@ repository and the uploader app. It is not run by CI or by unittest discovery.
 Every run uses its own tag prefix "e2e-<timestamp>-", so runs never interfere with each other.
 The releases are left in place for inspection; delete them by hand when no longer needed.
 
+Run it against a temporary repository created only for this test, e.g.
+sfg-autonomous-systems/release-asset-name-test; it needs no content and can be deleted afterwards.
 Requires dpkg-deb and the GitHub CLI with a token that can write releases of the test
 repository, e.g. in an ubuntu:24.04 container:
     GH_TOKEN=... python3 tests/e2e_release_storage.py \\
@@ -259,7 +261,7 @@ def main() -> None:
     parser.add_argument(
         "--repository",
         required=True,
-        help="Test repository, e.g. sfg-autonomous-systems/release-asset-name-test.",
+        help="Temporary test repository, e.g. sfg-autonomous-systems/release-asset-name-test.",
     )
     parser.add_argument(
         "--trusted-uploader",
