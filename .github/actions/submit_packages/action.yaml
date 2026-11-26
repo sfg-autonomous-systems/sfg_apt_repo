@@ -9,7 +9,10 @@ inputs:
     description: "The private key for the package-submitter GitHub App."
     required: true
   distribution:
-    description: "The target Ubuntu distribution (e.g. jammy, noble)."
+    description: >-
+      The target Ubuntu distribution (e.g. jammy, noble), or "all" for packages
+      that are installable on every distribution. "all" stores the packages
+      once and publishes them into every distribution.
     required: true
   path:
     description: >-
@@ -17,7 +20,7 @@ inputs:
       Mutually exclusive with `artifact_name`; exactly one of the two must be
       set. The packages must end up at the root of the artifact, without
       subdirectories: the processing workflow discovers them with a
-      non-recursive glob, `"../submitted_packages/"*.deb`.
+      non-recursive glob, `"submitted_packages/"*.deb`.
     required: false
     default: ""
   artifact_name:

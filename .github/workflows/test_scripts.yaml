@@ -1,0 +1,22 @@
+name: Test Scripts
+
+on:
+  push:
+    branches: [main]
+    paths: [scripts/**, tests/**]
+  pull_request:
+    paths: [scripts/**, tests/**]
+
+permissions:
+  contents: read
+
+jobs:
+  test_scripts:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      # The tests use an in-memory fake of the GitHub releases and build test packages with dpkg-deb.
+      - name: Run Unit Tests
+        run: python3 -m unittest discover -s tests -v
