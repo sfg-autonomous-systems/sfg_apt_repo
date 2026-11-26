@@ -1,0 +1,5 @@
+Types: deb
+URIs: https://sfg-autonomous-systems.github.io/sfg_apt_repo
+Suites: @DISTRIBUTION@
+Components: main
+Signed-By: /usr/share/keyrings/sfg-apt-repo.gpg

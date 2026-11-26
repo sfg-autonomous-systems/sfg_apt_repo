@@ -77,11 +77,14 @@ jobs:
 
           echo "Artifact origin verified successfully."
 
-      # Only the scripts are needed; packages are stored in the releases, not in git.
-      - name: Checkout Scripts
+      # The scripts, and the internal package sources for the build step below. Packages are stored
+      # in the releases, not in git.
+      - name: Checkout Scripts and Internal Package Sources
         uses: actions/checkout@v7
         with:
-          sparse-checkout: scripts
+          sparse-checkout: |
+            scripts
+            src
           path: sfg_apt_repo
 
       # 'all' stores the packages once in the common release, which is published into every distribution.
@@ -100,3 +103,11 @@ jobs:
           # The dispatched branch selects the releases: "main" uses the production releases.
           python3 "sfg_apt_repo/scripts/release_assets.py" --branch "${GITHUB_REF_NAME}" \
             upload "${DISTRIBUTION}" "${packages[@]}"
+
+      # A distribution's first package creates its release. Internal packages built per distribution,
+      # such as sfg-apt-source, must exist there before the publish workflow runs, so build and upload
+      # every missing internal package now. Usually everything exists and nothing is built.
+      - name: Build Missing Internal Packages
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: python3 "sfg_apt_repo/scripts/build_internal_packages.py" --branch "${GITHUB_REF_NAME}" --upload

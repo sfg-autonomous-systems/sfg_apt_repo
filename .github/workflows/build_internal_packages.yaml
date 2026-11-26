@@ -6,6 +6,8 @@ on:
     paths: [src/**, scripts/build_internal_packages.py, scripts/package_storage.py, scripts/debian_package.py]
   pull_request:
     paths: [src/**, scripts/build_internal_packages.py, scripts/package_storage.py, scripts/debian_package.py]
+  # Rebuild missing packages by hand, e.g. after a failed run.
+  workflow_dispatch:
 
 # Serialize package uploads with submitted-package processing so both workflows
 # cannot check and update the package releases at the same time.
@@ -35,8 +37,8 @@ jobs:
           fetch-depth: 0
 
       # Builds every src/<package> that is missing from its release into build/<release name>/.
-      # Only pushes upload the built packages. Pull requests compare against the releases of their
-      # target branch.
+      # Pushes and manual runs upload the built packages. Pull requests compare against the releases of
+      # their target branch.
       - name: Build and Upload Internal Packages
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
@@ -45,7 +47,7 @@ jobs:
           DIFF_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           arguments=(--branch "${BRANCH}" --diff-base "${DIFF_BASE}" --diff-head "${DIFF_HEAD}")
-          if [ "${{ github.event_name }}" = "push" ]; then
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
             arguments+=(--upload)
           fi
           python3 "scripts/build_internal_packages.py" "${arguments[@]}"

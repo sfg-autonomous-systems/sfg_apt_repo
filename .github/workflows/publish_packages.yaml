@@ -89,8 +89,56 @@ jobs:
             cp -r "${HOME}/.aptly/public/." "github-pages/"
           fi
 
-          gpg --armor --export "${{ secrets.GPG_KEY_ID }}" >"github-pages/sfg-apt-repo-public.gpg"
-          echo "GPG public key published to 'github-pages/sfg-apt-repo-public.gpg'."
+          # The public signing key for the manual setup.
+          gpg --armor --export "${{ secrets.GPG_KEY_ID }}" >"github-pages/sfg-apt-repo-public.asc"
+          echo "GPG public key published to 'github-pages/sfg-apt-repo-public.asc'."
+
+      # Provide a stable URL to the latest sfg-apt-source package of each distribution for bootstrapping.
+      # Installed clients only trust the keys in the keyring of that package, so the signing key must be
+      # one of them. The package is checked rather than src/, because a keyring change without a version
+      # bump is never built.
+      - name: Verify and Publish Bootstrap Packages
+        env:
+          SIGNING_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+        run: |
+          keyring_member="./usr/share/keyrings/sfg-apt-repo.gpg"
+          for distribution_directory in "./packages/"*/; do
+            [ -d "${distribution_directory}" ] || continue
+            distribution=$(basename "${distribution_directory}")
+
+            # Compare Debian versions from the control files instead of sorting filenames.
+            latest_package_filepath=""
+            latest_version=""
+            for package_filepath in "${distribution_directory}"sfg-apt-source_*.deb; do
+              [ -f "${package_filepath}" ] || continue
+              version=$(dpkg-deb --field "${package_filepath}" Version)
+              if [ -z "${latest_version}" ] || dpkg --compare-versions "${version}" gt "${latest_version}"; then
+                latest_package_filepath="${package_filepath}"
+                latest_version="${version}"
+              fi
+            done
+            if [ -z "${latest_package_filepath}" ]; then
+              echo "Error: Distribution '${distribution}' has no sfg-apt-source package."
+              exit 1
+            fi
+
+            package_filename=$(basename "${latest_package_filepath}")
+            keyring_filepath=$(mktemp)
+            if ! dpkg-deb --fsys-tarfile "${latest_package_filepath}" | tar -xO "${keyring_member}" >"${keyring_filepath}"; then
+              echo "Error: '${package_filename}' has no keyring '${keyring_member}'."
+              exit 1
+            fi
+            if ! gpg --show-keys --with-colons "${keyring_filepath}" | grep -E '^(fpr|pub|sub):' | grep -qi "${SIGNING_KEY_ID}"; then
+              echo "Error: Signing key '${SIGNING_KEY_ID}' is not in the keyring of '${package_filename}'."
+              echo "Add it to 'src/sfg-apt-source/usr/share/keyrings/sfg-apt-repo.gpg' and bump the sfg-apt-source version."
+              exit 1
+            fi
+            rm "${keyring_filepath}"
+            echo "Signing key '${SIGNING_KEY_ID}' is in the keyring of '${package_filename}'."
+
+            cp "${latest_package_filepath}" "github-pages/sfg-apt-source_${distribution}.deb"
+            echo "Published '${package_filename}' as 'github-pages/sfg-apt-source_${distribution}.deb'."
+          done
 
       - name: Rebuild Directory Listings
         run: python3 "scripts/rebuild_directory_listings.py" "github-pages"
@@ -128,12 +176,11 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Add Repository and Key
+      # Same steps as the user setup in the README.
+      - name: Bootstrap Repository With sfg-apt-source
         run: |
-          # Add the repository key and repository entry.
-          curl -fsSL "https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-repo-public.gpg" | sudo gpg --dearmor -o "/usr/share/keyrings/sfg-apt-repo-keyring.gpg"
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/sfg-apt-repo-keyring.gpg] https://sfg-autonomous-systems.github.io/sfg_apt_repo/ $(. /etc/os-release && echo "$VERSION_CODENAME") main" | sudo tee "/etc/apt/sources.list.d/sfg-apt-repo.list"
-          # Update package lists.
+          curl -fsSLo "/tmp/sfg-apt-source.deb" "https://sfg-autonomous-systems.github.io/sfg_apt_repo/sfg-apt-source_$(. /etc/os-release && echo "$UBUNTU_CODENAME").deb"
+          sudo apt-get install -y "/tmp/sfg-apt-source.deb"
           sudo apt-get update
 
       - name: Test Rosdep Index Package

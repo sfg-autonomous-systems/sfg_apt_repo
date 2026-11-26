@@ -1,0 +1,15 @@
+#!/bin/sh
+# Refuse to install the package of another Ubuntu release: its APT source would install packages
+# built for that release. @DISTRIBUTION@ is replaced with the release's codename when building.
+set -e
+
+. /etc/os-release
+if [ -z "${UBUNTU_CODENAME:-}" ]; then
+    echo "sfg-apt-source: only Ubuntu and Ubuntu-based systems are supported." >&2
+    exit 1
+fi
+if [ "${UBUNTU_CODENAME}" != "@DISTRIBUTION@" ]; then
+    echo "sfg-apt-source: this package is for Ubuntu '@DISTRIBUTION@', but this system is '${UBUNTU_CODENAME}'." >&2
+    echo "Download sfg-apt-source_${UBUNTU_CODENAME}.deb instead." >&2
+    exit 1
+fi
